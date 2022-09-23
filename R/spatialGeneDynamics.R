@@ -231,25 +231,33 @@ DoMultiBarHeatmap <- function (object,
 #' @import cowplot
 relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster,plotByDist=F,geneOI=NULL,
                                     annotationToUse="orig.cluster",assayToUse="SCT", quant.left=0.1, quant.right=0.9,
-                                    nCperL=NULL,nL=NULL,heatmapGp=NULL,pal="Paired",n.neighbor=30,extreme.comp=F){
-  
+                                    nCperL=NULL,nL=NULL,heatmapGp=NULL,pal="Paired",n.neighbor=30,extreme.comp=F,heatmap.pal="viridis"){
+
   scHolography.sc<-scHolography.obj$scHolography.sc
-  
+  if(heatmap.pal=="rdbu"){
+    heat.col <- rev(RColorBrewer::brewer.pal(n = 25, name = "RdBu"))
+  }else if(heatmap.pal=="magma"){
+    heat.col <-viridis::viridis(25,option = "A")
+  }else if (heatmap.pal=="rdbu_1"){
+    heat.col<-colorspace::diverge_hsv(25)
+  }else{
+    heat.col <-viridis::viridis(25)
+  }
   if(is.numeric(as.numeric(levels(scHolography.sc[[annotationToUse]][[1]])))){
     scHolography.sc[[annotationToUse]][[1]]<-factor(paste("c",scHolography.sc[[annotationToUse]][[1]],sep = ""),levels = paste("c",levels(scHolography.sc[[annotationToUse]][[1]]),sep = ""))
     query.cluster<-paste("c",query.cluster,sep = "")
-    
+
     ref.cluster<-paste("c",ref.cluster,sep = "")
-    
+
   }
-  
+
   query.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]]%in%query.cluster)
   ref.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]]%in%ref.cluster)
   graph <- igraph::graph_from_adjacency_matrix(scHolography.obj$adj.mtx,mode = "undirected")
   dist <- igraph::distances(graph, mode="out")
   clus.dist <- dist[query.cluster.ind,ref.cluster.ind]
   query.to.ref.dis <- (colMeans(apply(clus.dist, 1, sort)[1:n.neighbor,]))
-  
+
   if(plotByDist){
     nCperL=1
     quant.left = NULL
@@ -293,19 +301,19 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
       layer.seq[which(is.na(layer.seq))]<-paste(paste(query.cluster,collapse = "_"),nL,sep = "_")
     }
   }
-  
+
   query.cluster.sub<-subset(scHolography.sc,cells = c(query.cluster.ind,ref.cluster.ind))
   query.cluster.sub$cal.dist <- (c(query.to.ref.dis,rep(NA,length(ref.cluster.ind))))
-  
+
   query.cluster.sub[[paste(paste(query.cluster,collapse = "_"),paste(ref.cluster,collapse = "_"),sep = "To")]]<-factor(c(layer.seq,as.character(scHolography.sc[[annotationToUse]][[1]][ref.cluster.ind])),levels=c(stringr::str_sort(unique(layer.seq),numeric = T),ref.cluster))
-  
+
   if(extreme.comp){
     query.cluster.sub <- subset(query.cluster.sub, cells=which(query.cluster.sub[[paste(paste(query.cluster,collapse = "_"),paste(ref.cluster,collapse = "_"),sep = "To")]]!=paste(paste(query.cluster,collapse = "_"),"2Mid",sep = "_")))
   }
-  
+
   query.cluster.sub <- Seurat::SetIdent(query.cluster.sub,
                                         value = paste(paste(query.cluster,collapse = "_"),paste(ref.cluster,collapse = "_"),sep = "To"),sep = "To")
-  
+
   if(plotByDist==F){
     if(is.null(geneOI)){
       marker.obj <- subset(query.cluster.sub,cells = which((query.cluster.sub@active.ident %in% ref.cluster)==F))
@@ -316,41 +324,41 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
       markers<-Seurat::FindAllMarkers(marker.obj,only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
       top10 <- markers %>%
         group_by(cluster) %>%
-        top_n(n = 10, wt = avg_log2FC) 
+        top_n(n = 10, wt = avg_log2FC)
     }}
-  
+
   if(is.null(geneOI)){
     if(plotByDist){
       show("Need the Gene of Interest list if ploting by ordered distance")
     }else{
       p1 <- DoMultiBarHeatmap(subset(query.cluster.sub,cells = which((query.cluster.sub@active.ident %in% ref.cluster)==F)),assay = assayToUse,
                               features = top10$gene,additional.group.by = if(is.null(heatmapGp)==F){heatmapGp},label = T,palette = pal) +
-        Seurat::NoLegend()+ggplot2::scale_fill_gradientn(colors = c("#053061","#3784BB","#A7CFE4","#F7F7F7","#F7B698","#CA4741","#67001F"))
+        Seurat::NoLegend()+ggplot2::scale_fill_gradientn(colors = heat.col)
       show(p1)
     }
   }else{
     obj.sub <- subset(query.cluster.sub,cells = which((query.cluster.sub@active.ident %in% ref.cluster)==F))
-    p1 <- DoMultiBarHeatmap(obj.sub,features = geneOI, assay = assayToUse,draw.lines = if(plotByDist){F}else{T},additional.group.by = if(is.null(heatmapGp)==F){heatmapGp},label = if(plotByDist){F}else{T},palette = pal) + Seurat::NoLegend()+ggplot2::scale_fill_gradientn(colors = c("#053061","#3784BB","#A7CFE4","#F7F7F7","#F7B698","#CA4741","#67001F"))
+    p1 <- DoMultiBarHeatmap(obj.sub,features = geneOI, assay = assayToUse,draw.lines = if(plotByDist){F}else{T},additional.group.by = if(is.null(heatmapGp)==F){heatmapGp},label = if(plotByDist){F}else{T},palette = pal) + Seurat::NoLegend()+ggplot2::scale_fill_gradientn(colors = heat.col)
     if(plotByDist==F){
       show(p1)
     }else{
-      
-      p1 <- DoMultiBarHeatmap(obj.sub,features = geneOI, assay = assayToUse,draw.lines = if(plotByDist){F}else{T},size = 3,disPlot = T,additional.group.by = annotationToUse,label = F,palette = pal) + Seurat::NoLegend()+ggplot2::scale_fill_gradientn(colors = c("#053061","#3784BB","#A7CFE4","#F7F7F7","#F7B698","#CA4741","#67001F")) +ggplot2::theme(legend.title=ggplot2::element_blank())
+
+      p1 <- DoMultiBarHeatmap(obj.sub,features = geneOI, assay = assayToUse,draw.lines = if(plotByDist){F}else{T},size = 3,disPlot = T,additional.group.by = annotationToUse,label = F,palette = pal) + Seurat::NoLegend()+ggplot2::scale_fill_gradientn(colors = heat.col) +ggplot2::theme(legend.title=ggplot2::element_blank())
       fea <- Seurat::VariableFeatures(obj.sub)
-      
+
       obj.sub[[annotationToUse]][[1]] <-droplevels(obj.sub[[annotationToUse]][[1]])
       labal.col<-colorRampPalette(brewer.pal(12, pal))(length(levels(scHolography.sc[[annotationToUse]][[1]])))
       p<- Seurat::DoHeatmap(obj.sub,features = fea[1],group.by = annotationToUse,group.colors =labal.col[unlist(lapply(levels(obj.sub[[annotationToUse]][[1]] ),function(x){which(levels(scHolography.sc[[annotationToUse]][[1]])%in%x)}))] )+ggplot2::scale_fill_gradientn(colors = colorRampPalette(brewer.pal(12, pal))(100),name="Distance",labels=c("close","far"),n.breaks=2)
       grid::grid.newpage()
       legend <- cowplot::get_legend(p)
       show( cowplot::plot_grid( p1, NULL, legend, rel_widths = c(1, -0.1, 1), align = "hv",nrow = 1 ))
-      
+
     }
   }
-  
+
   scHolography.obj$scHolography.sc <- query.cluster.sub
   if(exists("top10")){list(scHolography.obj=scHolography.obj,DEG=top10)}else{list(scHolography.obj=scHolography.obj,DEG=NULL)}
-  
+
 }
 
 
@@ -369,7 +377,7 @@ findDriverGene <- function(scHolography.obj,query.cluster,ref.cluster,k1=1.96,k2
   dist <- igraph::distances(graph, mode="out")
   clus.dist <- dist[query.cluster.ind,ref.cluster.ind]
   query.to.ref.dis <- (colMeans(apply(clus.dist, 1, sort)[1:n.neighbor,]))
-  
+
   if(is.null(bandwidth)){
     default.dist <- hist(query.to.ref.dis,plot = F)
     bandwidth <- default.dist$breaks[2]-default.dist$breaks[1]
@@ -378,7 +386,7 @@ findDriverGene <- function(scHolography.obj,query.cluster,ref.cluster,k1=1.96,k2
   p<-hist(query.to.ref.dis,breaks =seq(from=0,to=max(ceiling(query.to.ref.dis/bandwidth)*bandwidth),by=bandwidth),plot = F)
   count<-p$count
   mid <- rowMeans(embed(p$breaks,2))
-  
+
   avg.expr <- apply(embed(p$breaks,2),1,function(x){
     if(length(intersect(which(query.to.ref.dis>x[2]),which(query.to.ref.dis<=x[1])))>0){
       sub.query.sc.int <- subset(sub.query.sc.obj,cells=intersect(which(query.to.ref.dis>x[2]),which(query.to.ref.dis<=x[1])))
@@ -407,7 +415,7 @@ findDriverGene <- function(scHolography.obj,query.cluster,ref.cluster,k1=1.96,k2
   show(plotEnrich(enriched[[3]], showTerms = 20, numChar = 60, y = "Count", orderBy = "P.value", title = "Distal Gene Ontology Analysis")
   )
   list(regression=regression,avg.expr.sub=avg.expr.sub,count=count,bandwidth=bandwidth)
-  
+
 }
 
 #' Visualization of Space Driver Genes
@@ -428,6 +436,6 @@ driverGenePlot <- function(findDG.obj,gene){
       name = "Frequency",
       sec.axis = ggplot2::sec_axis(~./coeff, name="Expression"))+ggplot2::ggtitle(as.character(gene))+
     ggplot2::theme_classic()
-  
+
 }
 
