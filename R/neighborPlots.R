@@ -46,6 +46,7 @@ neighborCompositionPlot<-function(scHolography.obj, annotationToUse="orig.cluste
 #' @export
 #' @import Seurat
 #' @import RColorBrewer
+#' @import dplyr
 
 
 neighborMarkerPlot <- function(scHolography.obj, annotationToUse="orig.cluster", query.cluster, target.cluster, palette = "Paired",assayToUse="SCT",cutoff=0){
