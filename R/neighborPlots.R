@@ -55,6 +55,8 @@ neighborMarkerPlot <- function(scHolography.obj, annotationToUse="orig.cluster",
     target.cluster=levels(scHolography.sc[[annotationToUse]][[1]])
   }
   anno<-as.character(scHolography.sc[[annotationToUse]][[1]])
+  target.cluster <- stringr::str_sort(target.cluster,numeric = T)
+  query.cluster <-stringr::str_sort(query.cluster,numeric = T)
   cell.ind <- which(anno%in%query.cluster)
   dist.sub <-adj.mtx[cell.ind,]
   ind.ls<-lapply(target.cluster, function(x){
