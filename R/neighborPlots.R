@@ -49,7 +49,7 @@ neighborCompositionPlot<-function(scHolography.obj, annotationToUse="orig.cluste
 #' @import dplyr
 
 
-neighborMarkerPlot <- function(scHolography.obj, annotationToUse="orig.cluster", query.cluster, target.cluster, palette = "Paired",assayToUse="SCT",cutoff=0){
+neighborMarkerPlot <- function(scHolography.obj, annotationToUse="orig.cluster", query.cluster, target.cluster, palette = "Paired",assayToUse="SCT",cutoff=1,n.DEG=10){
   library(dplyr)
   scHolography.sc<-scHolography.obj$scHolography.sc
   adj.mtx <- scHolography.obj$adj.mtx
@@ -63,7 +63,7 @@ neighborMarkerPlot <- function(scHolography.obj, annotationToUse="orig.cluster",
   dist.sub <-adj.mtx[cell.ind,]
   ind.ls<-lapply(target.cluster, function(x){
     tg.cell.ind <- which(anno%in%x)
-    which(rowSums(dist.sub[,tg.cell.ind])>cutoff)
+    which(rowSums(dist.sub[,tg.cell.ind])>=cutoff)
   })
   sub.obj.ls <- lapply(ind.ls, function(x){
     subset(scHolography.sc,cells = cell.ind[x])
@@ -87,13 +87,15 @@ neighborMarkerPlot <- function(scHolography.obj, annotationToUse="orig.cluster",
   markers<-FindAllMarkers(combined,assay = "RNA",only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
   markers %>%
     group_by(cluster) %>%
-    top_n(n = 10, wt = avg_log2FC) -> top10
+    top_n(n = n.DEG, wt = avg_log2FC) -> top10
   num.clus <- (levels(scHolography.sc[[annotationToUse]][[1]]))
   mycolors <- colorRampPalette(brewer.pal(12, palette))(length(num.clus))[which(num.clus%in%levels(combined@active.ident))]
-
+  markers %>%
+    group_by(cluster) %>%
+    top_n(n = 20, wt = avg_log2FC) -> top20
   heatmap<-DoHeatmap(combined,group.colors = mycolors,features = top10$gene,assay = assayToUse)+ggplot2::scale_fill_gradientn(colors = c("#053061","#3784BB","#A7CFE4","#F7F7F7","#F7B698","#CA4741","#67001F"))
   show(heatmap)
-  list(heatmap=heatmap, DEG=top10)
+  list(heatmap=heatmap, DEG=top20)
 }
 
 
