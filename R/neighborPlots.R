@@ -50,6 +50,7 @@ neighborCompositionPlot<-function(scHolography.obj, annotationToUse="orig.cluste
 
 
 neighborMarkerPlot <- function(scHolography.obj, annotationToUse="orig.cluster", query.cluster, target.cluster, palette = "Paired",assayToUse="SCT",cutoff=0){
+  library(dplyr)
   scHolography.sc<-scHolography.obj$scHolography.sc
   adj.mtx <- scHolography.obj$adj.mtx
   if(is.null(target.cluster)){
