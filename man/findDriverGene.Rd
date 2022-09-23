@@ -13,7 +13,7 @@ findDriverGene(
   annotationToUse = "orig.cluster",
   n.closeNeighbor = 30,
   assayToUse = "SCT",
-  bandwidth = 1
+  bandwidth = NULL
 )
 }
 \description{

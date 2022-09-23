@@ -12,12 +12,14 @@ relativeSpatialAnalysis(
   geneOI = NULL,
   annotationToUse = "orig.cluster",
   assayToUse = "SCT",
-  quant = 0.1,
+  quant.left = 0.1,
+  quant.right = 0.9,
   nCperL = NULL,
   nL = NULL,
   heatmapGp = NULL,
   pal = "Paired",
-  n.neighbor = 30
+  n.neighbor = 30,
+  extreme.comp = F
 )
 }
 \description{

@@ -4,7 +4,7 @@
 \alias{driverGenePlot}
 \title{Visualization of Space Driver Genes}
 \usage{
-driverGenePlot(findDG.boj, gene)
+driverGenePlot(findDG.obj, gene)
 }
 \description{
 Visualization of Space Driver Genes
