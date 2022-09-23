@@ -1,9 +1,3 @@
-
-
-library(viridis)
-
-
-
 #' Do MultiBar Heatmap
 #' @import Seurat
 #' @import dplyr
@@ -336,12 +330,12 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
     }
   }else{
     obj.sub <- subset(query.cluster.sub,cells = which((query.cluster.sub@active.ident %in% ref.cluster)==F))
-    p1 <- DoMultiBarHeatmap(obj.sub,features = geneOI, assay = assayToUse,draw.lines = if(plotByDist){F}else{T},additional.group.by = if(is.null(heatmapGp)==F){heatmapGp},label = if(plotByDist){F}else{T},palette = pal) + Seurat::NoLegend()+ggplot2::scale_fill_gradientn(colors = viridis_pal()(20))
+    p1 <- DoMultiBarHeatmap(obj.sub,features = geneOI, assay = assayToUse,draw.lines = if(plotByDist){F}else{T},additional.group.by = if(is.null(heatmapGp)==F){heatmapGp},label = if(plotByDist){F}else{T},palette = pal) + Seurat::NoLegend()+ggplot2::scale_fill_gradientn(colors = c("#053061","#3784BB","#A7CFE4","#F7F7F7","#F7B698","#CA4741","#67001F"))
     if(plotByDist==F){
       show(p1)
     }else{
 
-      p1 <- DoMultiBarHeatmap(obj.sub,features = geneOI, assay = assayToUse,draw.lines = if(plotByDist){F}else{T},size = 3,disPlot = T,additional.group.by = annotationToUse,label = F,palette = pal) + Seurat::NoLegend()+ggplot2::scale_fill_gradientn(colors = viridis_pal()(20)) +ggplot2::theme(legend.title=ggplot2::element_blank())
+      p1 <- DoMultiBarHeatmap(obj.sub,features = geneOI, assay = assayToUse,draw.lines = if(plotByDist){F}else{T},size = 3,disPlot = T,additional.group.by = annotationToUse,label = F,palette = pal) + Seurat::NoLegend()+ggplot2::scale_fill_gradientn(colors = c("#053061","#3784BB","#A7CFE4","#F7F7F7","#F7B698","#CA4741","#67001F")) +ggplot2::theme(legend.title=ggplot2::element_blank())
       fea <- Seurat::VariableFeatures(obj.sub)
 
       obj.sub[[annotationToUse]][[1]] <-droplevels(obj.sub[[annotationToUse]][[1]])
