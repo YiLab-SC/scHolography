@@ -103,7 +103,7 @@ neighborMarkerPlot <- function(scHolography.obj, annotationToUse="orig.cluster",
   markers %>%
     group_by(cluster) %>%
     top_n(n = 20, wt = avg_log2FC) -> top20
-  heatmap<-DoHeatmap(combined,group.colors = mycolors,features = top10$gene,assay = assayToUse)+ggplot2::scale_fill_gradientn(colors = heatmap.pal)
+  heatmap<-DoHeatmap(combined,group.colors = mycolors,features = top10$gene,assay = assayToUse)+ggplot2::scale_fill_gradientn(colors = heat.col)
   show(heatmap)
   list(heatmap=heatmap, DEG=top20)
 }
