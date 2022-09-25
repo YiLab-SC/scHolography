@@ -49,9 +49,19 @@ neighborCompositionPlot<-function(scHolography.obj, annotationToUse="orig.cluste
 #' @import dplyr
 
 
-neighborMarkerPlot <- function(scHolography.obj, annotationToUse="orig.cluster", query.cluster, target.cluster, palette = "Paired",assayToUse="SCT",cutoff=1,n.DEG=10){
+neighborMarkerPlot <- function(scHolography.obj, annotationToUse="orig.cluster", query.cluster, target.cluster, palette = "Paired",assayToUse="SCT",cutoff=1,n.DEG=10,heatmap.pal="viridis"){
   library(dplyr)
   scHolography.sc<-scHolography.obj$scHolography.sc
+  if(heatmap.pal=="rdbu"){
+    heat.col <- rev(RColorBrewer::brewer.pal(n = 25, name = "RdBu"))
+  }else if(heatmap.pal=="magma"){
+    heat.col <-viridis::viridis(25,option = "A")
+  }else if (heatmap.pal=="rdbu_1"){
+    heat.col<-colorspace::diverge_hsv(25)
+  }else{
+    heat.col <-viridis::viridis(25)
+  }
+
   adj.mtx <- scHolography.obj$adj.mtx
   if(is.null(target.cluster)){
     target.cluster=levels(scHolography.sc[[annotationToUse]][[1]])
@@ -93,7 +103,7 @@ neighborMarkerPlot <- function(scHolography.obj, annotationToUse="orig.cluster",
   markers %>%
     group_by(cluster) %>%
     top_n(n = 20, wt = avg_log2FC) -> top20
-  heatmap<-DoHeatmap(combined,group.colors = mycolors,features = top10$gene,assay = assayToUse)+ggplot2::scale_fill_gradientn(colors = c("#053061","#3784BB","#A7CFE4","#F7F7F7","#F7B698","#CA4741","#67001F"))
+  heatmap<-DoHeatmap(combined,group.colors = mycolors,features = top10$gene,assay = assayToUse)+ggplot2::scale_fill_gradientn(colors = heatmap.pal)
   show(heatmap)
   list(heatmap=heatmap, DEG=top20)
 }

@@ -234,6 +234,8 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
                                     nCperL=NULL,nL=NULL,heatmapGp=NULL,pal="Paired",n.neighbor=30,extreme.comp=F,heatmap.pal="viridis"){
 
   scHolography.sc<-scHolography.obj$scHolography.sc
+  scHolography.sc[[annotationToUse]][[1]] <- factor(scHolography.sc[[annotationToUse]][[1]],levels = stringr::str_sort(unique(scHolography.sc[[annotationToUse]][[1]]),numeric = T))
+
   if(heatmap.pal=="rdbu"){
     heat.col <- rev(RColorBrewer::brewer.pal(n = 25, name = "RdBu"))
   }else if(heatmap.pal=="magma"){
@@ -243,7 +245,7 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
   }else{
     heat.col <-viridis::viridis(25)
   }
-  if(is.numeric(as.numeric(levels(scHolography.sc[[annotationToUse]][[1]])))){
+  if(is.numeric(as.numeric(as.character(levels(scHolography.sc[[annotationToUse]][[1]]))))){
     scHolography.sc[[annotationToUse]][[1]]<-factor(paste("c",scHolography.sc[[annotationToUse]][[1]],sep = ""),levels = paste("c",levels(scHolography.sc[[annotationToUse]][[1]]),sep = ""))
     query.cluster<-paste("c",query.cluster,sep = "")
 

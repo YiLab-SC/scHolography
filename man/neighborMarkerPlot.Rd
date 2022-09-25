@@ -11,7 +11,9 @@ neighborMarkerPlot(
   target.cluster,
   palette = "Paired",
   assayToUse = "SCT",
-  cutoff = 0
+  cutoff = 1,
+  n.DEG = 10,
+  heatmap.pal = "viridis"
 )
 }
 \description{

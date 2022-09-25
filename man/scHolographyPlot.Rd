@@ -11,7 +11,7 @@ scHolographyPlot(
   feature = NULL,
   cutoff = NULL,
   color.by = "orig.cluster",
-  dot.size = 3,
+  dot.size = 5,
   palette = "Paired",
   highlight = NULL,
   assayToUse = "SCT"
