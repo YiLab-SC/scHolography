@@ -148,13 +148,13 @@ neighborSankeyPlot<- function(scHolography.obj, annotationToUse="orig.cluster",q
   Sankey.dat$node <- factor(paste("s",anno[Sankey.mat[,1]],sep = "_"),levels = paste("s",levels(scHolography.sc[[annotationToUse]][[1]]),sep = "_"))
   Sankey.dat$next_node <- factor(paste("t",anno[Sankey.mat[,2]],sep = "_"),levels = paste("t",levels(scHolography.sc[[annotationToUse]][[1]]),sep = "_"))
 
-  Sankey.net <-plyr::ddply(Sankey.dat,.(node, next_node), nrow)
+  Sankey.net <-plyr::ddply(Sankey.dat,plyr::.(node, next_node), nrow)
   nodes <- data.frame(
     name=c(as.character(Sankey.net$node),
            as.character(Sankey.net$next_node)) %>% unique()
   )
 
-  nodes.clus<-unlist(lapply(nodes$name, function(x) strsplit(x,split = "_")[[1]][2]))
+  nodes.clus<-unlist(lapply(nodes$name, function(x) paste(strsplit(x,split = "_")[[1]][-1],collapse = "_")))
   mycolors <- colorRampPalette(brewer.pal(12, palette))(length(levels(scHolography.sc[[annotationToUse]][[1]])))
 
 
