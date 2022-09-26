@@ -52,6 +52,9 @@ neighborCompositionPlot<-function(scHolography.obj, annotationToUse="orig.cluste
 neighborMarkerPlot <- function(scHolography.obj, annotationToUse="orig.cluster", query.cluster, target.cluster, palette = "Paired",assayToUse="SCT",cutoff=1,n.DEG=10,heatmap.pal="viridis"){
   library(dplyr)
   scHolography.sc<-scHolography.obj$scHolography.sc
+  scHolography.sc[[annotationToUse]][[1]] <- factor(scHolography.sc[[annotationToUse]][[1]],levels = stringr::str_sort(unique(scHolography.sc[[annotationToUse]][[1]]),numeric = T))
+
+  num.clus <- (levels(scHolography.sc[[annotationToUse]][[1]]))
   if(heatmap.pal=="rdbu"){
     heat.col <- rev(RColorBrewer::brewer.pal(n = 25, name = "RdBu"))
   }else if(heatmap.pal=="magma"){
@@ -98,7 +101,7 @@ neighborMarkerPlot <- function(scHolography.obj, annotationToUse="orig.cluster",
   markers %>%
     group_by(cluster) %>%
     top_n(n = n.DEG, wt = avg_log2FC) -> top10
-  num.clus <- (levels(scHolography.sc[[annotationToUse]][[1]]))
+
   mycolors <- colorRampPalette(brewer.pal(12, palette))(length(num.clus))[which(num.clus%in%levels(combined@active.ident))]
   markers %>%
     group_by(cluster) %>%
@@ -121,9 +124,8 @@ neighborMarkerPlot <- function(scHolography.obj, annotationToUse="orig.cluster",
 neighborSankeyPlot<- function(scHolography.obj, annotationToUse="orig.cluster",query.cluster,palette="Paired",font.size=12){
   scHolography.sc<-scHolography.obj$scHolography.sc
   adj.mtx <- scHolography.obj$adj.mtx
-  if( is.null(levels(scHolography.sc[[annotationToUse]][[1]]))){
-    scHolography.sc[[annotationToUse]][[1]]<-factor(scHolography.sc[[annotationToUse]][[1]],levels = stringr::str_sort(unique(scHolography.sc[[annotationToUse]][[1]]),numeric = T))
-  }
+  scHolography.sc[[annotationToUse]][[1]] <- factor(scHolography.sc[[annotationToUse]][[1]],levels = stringr::str_sort(unique(scHolography.sc[[annotationToUse]][[1]]),numeric = T))
+
   graph <- igraph::graph_from_adjacency_matrix(adj.mtx,mode = "undirected")
 
   dist <- igraph::distances(graph, mode="out")
