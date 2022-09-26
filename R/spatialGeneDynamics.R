@@ -371,7 +371,7 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
 #' @import stats
 #' @import enrichR
 
-findDriverGene <- function(scHolography.obj,query.cluster,ref.cluster,k1=1.96,k2=1.96,annotationToUse="orig.cluster",n.closeNeighbor=30, assayToUse="SCT",bandwidth=NULL){
+findDriverGene <- function(scHolography.obj,query.cluster,ref.cluster,k1=1.96,k2=1.96,annotationToUse="orig.cluster",n.neighbor=30, assayToUse="SCT",bandwidth=NULL){
   scHolography.sc<-scHolography.obj$scHolography.sc
   query.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]]%in%query.cluster)
   ref.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]]%in%ref.cluster)

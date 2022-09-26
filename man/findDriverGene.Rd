@@ -11,7 +11,7 @@ findDriverGene(
   k1 = 1.96,
   k2 = 1.96,
   annotationToUse = "orig.cluster",
-  n.closeNeighbor = 30,
+  n.neighbor = 30,
   assayToUse = "SCT",
   bandwidth = NULL
 )
