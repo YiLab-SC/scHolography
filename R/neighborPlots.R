@@ -189,5 +189,39 @@ neighborSankeyPlot<- function(scHolography.obj, annotationToUse="orig.cluster",q
 
 
 
+#' Cluster Distance Boxplot
+#' @export
+#' @import ggplot2
+#' @import igraph
+#' @import RColorBrewer
+#' @import plotly
+
+clusterDistanceBoxplot <- function(scHolography.obj,annotationToUse = "orig.cluster",query.cluster.list,
+                                   reference.cluster,palette = "Paired", n.neighbor = 30){
+  scHolography.sc<-scHolography.obj$scHolography.sc
+  adj.mtx <- brain.obj$adj.mtx
+  if( is.null(levels(scHolography.sc[[annotationToUse]][[1]]))){
+    scHolography.sc[[annotationToUse]][[1]]<-factor(scHolography.sc[[annotationToUse]][[1]],levels = stringr::str_sort(unique(scHolography.sc[[annotationToUse]][[1]]),numeric = T))
+  }
+  graph <- igraph::graph_from_adjacency_matrix(adj.mtx,mode = "undirected")
+
+  dist <- igraph::distances(graph, mode="out")
+  anno<-scHolography.sc[[annotationToUse]][[1]]
+  ref.ind <- which(anno%in%reference.cluster)
+  dist.list <- lapply(query.cluster.list, function(query.cluster){
+    query.ind <- which(anno%in%query.cluster)
+    dist.mtx <- dist[ref.ind,query.ind]
+    colMeans(apply(dist.mtx,2,sort)[1:n.neighbor,])
+  })
+  cell_count <- unlist(lapply(dist.list, function(x) length(x)))
+  dist.dat <- data.frame(Distance = unlist(dist.list), Celltype = unlist(lapply(1:length(cell_count), function(x) rep(query.cluster.list[x],cell_count[x]))))
+  dist.dat$Celltype <- factor(dist.dat$Celltype, levels = query.cluster.list)
+
+  my.color <- colorRampPalette(brewer.pal(12, palette))(length(levels(scHolography.sc[[annotationToUse]][[1]])))
+  color.used <- unlist(lapply(query.cluster.list, function(x){which(levels(scHolography.sc[[annotationToUse]][[1]]) %in%x)}))
+  fig <- ggplot(dist.dat, aes(x=Celltype, y=Distance,fill=Celltype))+geom_boxplot()+theme_classic()+scale_fill_manual(values=my.color[color.used])
+  fig
+}
+
 
 
