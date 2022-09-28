@@ -12,7 +12,7 @@ seuratSCT<-function(seuratObj,ndims ){
   seuratObj <- Seurat::SCTransform(seuratObj, assay = assayUsed, verbose = FALSE)
   seuratObj <- Seurat::RunPCA(seuratObj, assay = "SCT", verbose = FALSE)
   seuratObj <- Seurat::FindNeighbors(seuratObj, reduction = "pca", dims = 1:ndims,verbose = FALSE)
-  seuratObj <- Seurat::FindClusters(seuratObj, verbose = FALSE)
+  seuratObj <- Seurat::FindClusters(seuratObj,resolution = 0.5 ,verbose = FALSE)
   print("Data Normalized")
   seuratObj
 }
