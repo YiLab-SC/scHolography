@@ -199,7 +199,7 @@ neighborSankeyPlot<- function(scHolography.obj, annotationToUse="orig.cluster",q
 clusterDistanceBoxplot <- function(scHolography.obj,annotationToUse = "orig.cluster",query.cluster.list,
                                    reference.cluster,palette = "Paired", n.neighbor = 30){
   scHolography.sc<-scHolography.obj$scHolography.sc
-  adj.mtx <- brain.obj$adj.mtx
+  adj.mtx <- scHolography.obj$adj.mtx
   if( is.null(levels(scHolography.sc[[annotationToUse]][[1]]))){
     scHolography.sc[[annotationToUse]][[1]]<-factor(scHolography.sc[[annotationToUse]][[1]],levels = stringr::str_sort(unique(scHolography.sc[[annotationToUse]][[1]]),numeric = T))
   }
