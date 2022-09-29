@@ -11,6 +11,7 @@ seuratSCT<-function(seuratObj,ndims ){
   }
   seuratObj <- Seurat::SCTransform(seuratObj, assay = assayUsed, verbose = FALSE)
   seuratObj <- Seurat::RunPCA(seuratObj, assay = "SCT", verbose = FALSE)
+  seuratObj <- Seurat::RunUMAP(seuratObj,dims=1:ndims,verbose = FALSE)
   seuratObj <- Seurat::FindNeighbors(seuratObj, reduction = "pca", dims = 1:ndims,verbose = FALSE)
   seuratObj <- Seurat::FindClusters(seuratObj,resolution = 0.5 ,verbose = FALSE)
   print("Data Normalized")
@@ -32,6 +33,7 @@ dataAlign<-function(low.res.sp,high.res.sp, stProcessed=F, scProcessed=F, nFeatu
   low.res.sp[["type.assay"]]<-"sp"
   high.res.sp[["type.assay"]]<-"sc"
   integrate.list<-list(low.res.sp,high.res.sp)
+  comp.umap <- merge(x=low.res.sp@reductions$umap,y=high.res.sp@reductions$umap)
   rm(low.res.sp)
   rm(high.res.sp)
   features <- Seurat::SelectIntegrationFeatures(object.list = integrate.list,nfeatures = nFeatureToUse, verbose = FALSE)
@@ -45,6 +47,7 @@ dataAlign<-function(low.res.sp,high.res.sp, stProcessed=F, scProcessed=F, nFeatu
   sp.integrated <- Seurat::FindNeighbors(sp.integrated, reduction = "pca", dims = 1:nPCtoUse, verbose = FALSE)
   sp.integrated <- Seurat::FindClusters(sp.integrated, verbose = FALSE)
   sp.integrated$orig.cluster <-as.factor(as.numeric(sp.integrated$orig.cluster))
+  sp.integrated@reductions[["ind.umap"]] <- comp.umap
   sp.integrated
 }
 
