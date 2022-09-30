@@ -406,16 +406,16 @@ findDriverGene <- function(scHolography.obj,query.cluster,ref.cluster,k1=1.96,k2
   regression<-t(regression)
   regression<-as.data.frame(regression)
   genes <- regression$`z value`
-  setEnrichrSite("Enrichr") # Human genes
-  dbs <- c("GO_Molecular_Function_2021", "GO_Cellular_Component_2021", "GO_Biological_Process_2021")
-  enriched <- enrichr(rownames(regression)[which(regression$`z value`<(-k1))], dbs)
-  enriched[["GO_Biological_Process_2021"]]
-  show(plotEnrich(enriched[[3]], showTerms = 20, numChar = 40, y = "Count", orderBy = "P.value", title = "Proximal Gene Ontology Analysis")
-  )
-  enriched <- enrichr(rownames(regression)[which(regression$`z value`>(k2))], dbs)
-  enriched[["GO_Biological_Process_2021"]]
-  show(plotEnrich(enriched[[3]], showTerms = 20, numChar = 60, y = "Count", orderBy = "P.value", title = "Distal Gene Ontology Analysis")
-  )
+  # setEnrichrSite("Enrichr") # Human genes
+  # dbs <- c("GO_Molecular_Function_2021", "GO_Cellular_Component_2021", "GO_Biological_Process_2021")
+  # enriched <- enrichr(rownames(regression)[which(regression$`z value`<(-k1))], dbs)
+  # enriched[["GO_Biological_Process_2021"]]
+  # show(plotEnrich(enriched[[3]], showTerms = 20, numChar = 40, y = "Count", orderBy = "P.value", title = "Proximal Gene Ontology Analysis")
+  # )
+  # enriched <- enrichr(rownames(regression)[which(regression$`z value`>(k2))], dbs)
+  # enriched[["GO_Biological_Process_2021"]]
+  # show(plotEnrich(enriched[[3]], showTerms = 20, numChar = 60, y = "Count", orderBy = "P.value", title = "Distal Gene Ontology Analysis")
+  # )
   list(regression=regression,avg.expr.sub=avg.expr.sub,count=count,bandwidth=bandwidth)
 
 }
