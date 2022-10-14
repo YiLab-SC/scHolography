@@ -27,4 +27,7 @@ Imports:
     keras,
     matchingR,
     tensorflow,
-    plyr
+    plyr,
+    MASS,
+    colorspace,
+    viridis

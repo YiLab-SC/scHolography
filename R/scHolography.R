@@ -141,6 +141,7 @@ applyModel <- function(x_train, x_test, train_y, nRepeat ,seed,n.PCtoUse,n.PCtoO
 
 #' Decomposition Analysis
 #' @import matchingR
+#' @export
 interpretDecomp<-function(est.array, nslot, is3D=T){
   if(is3D){
     flatten.array <-apply(est.array,c(1),function(x){
@@ -235,3 +236,66 @@ trainHolography<-function(sp.integrated,vSeed=60611,n.repeat=50,n.slot=30,n.pcUs
 
 
 
+#' Find scHolography Inferred Distance between Cell Clusters
+#' @export
+#' @import igraph
+#' @import stringr
+#' @import Seurat
+findDistance<- function (scHolography.obj, query.cluster, ref.cluster, annotationToUse = "orig.cluster",n.neighbor = 30)
+{
+  scHolography.sc <- scHolography.obj$scHolography.sc
+  scHolography.sc[[annotationToUse]][[1]] <- unlist(lapply(as.character(scHolography.sc[[annotationToUse]][[1]]),
+                                                           function(x) paste0(strsplit(x, split = " ")[[1]], collapse = "_")))
+  scHolography.sc[[annotationToUse]][[1]] <- unlist(lapply(as.character(scHolography.sc[[annotationToUse]][[1]]),
+                                                           function(x) paste0(strsplit(x, split = "/")[[1]], collapse = "_")))
+  scHolography.sc[[annotationToUse]][[1]] <- factor(scHolography.sc[[annotationToUse]][[1]],
+                                                    levels = stringr::str_sort(unique(scHolography.sc[[annotationToUse]][[1]]),
+                                                                               numeric = T))
+  query.cluster <- unlist(lapply(as.character(query.cluster),
+                                 function(x) paste0(strsplit(x, split = " ")[[1]], collapse = "_")))
+  query.cluster <- unlist(lapply(as.character(query.cluster),
+                                 function(x) paste0(strsplit(x, split = "/")[[1]], collapse = "_")))
+  ref.cluster <- unlist(lapply(as.character(ref.cluster), function(x) paste0(strsplit(x,
+                                                                                      split = " ")[[1]], collapse = "_")))
+  ref.cluster <- unlist(lapply(as.character(ref.cluster), function(x) paste0(strsplit(x,
+                                                                                      split = "/")[[1]], collapse = "_")))
+  if (sum(is.na(as.numeric(as.character(levels(scHolography.sc[["orig.cluster"]][[1]]))))) ==
+      0) {
+    scHolography.sc[[annotationToUse]][[1]] <- factor(paste("c",
+                                                            scHolography.sc[[annotationToUse]][[1]], sep = ""),
+                                                      levels = paste("c", levels(scHolography.sc[[annotationToUse]][[1]]),
+                                                                     sep = ""))
+    query.cluster <- paste("c", query.cluster, sep = "")
+    ref.cluster <- paste("c", ref.cluster, sep = "")
+  }
+  query.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]] %in%
+                               query.cluster)
+  ref.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]] %in%
+                             ref.cluster)
+  graph <- igraph::graph_from_adjacency_matrix(scHolography.obj$adj.mtx,
+                                               mode = "undirected")
+  dist <- igraph::distances(graph, mode = "out")
+  clus.dist <- dist[query.cluster.ind, ref.cluster.ind]
+  query.to.ref.dis <- (colMeans(apply(clus.dist, 1, sort)[1:n.neighbor,
+  ]))
+
+  names(query.to.ref.dis) <- colnames(scHolography.sc)[query.cluster.ind]
+  query.to.ref.dis
+}
+
+#' Reconstruct scHolography graph from distance matrix
+#' @export
+#' @import igraph
+#' @import Seurat
+distToscHolography <- function(high.res.sp,low.res.sp,dist.mat){
+  dist.mat.ls <-interpretDecomp(dist.mat,is3D = F,nslot = 30)
+  adj.mtx <- dist.mat.ls[[1]]
+  g <- igraph::graph.adjacency(adj.mtx, mode="undirected")
+  set.seed(60611)
+  l_3d <- igraph::layout_with_fr(g, dim=3)
+  inf.obj <- list(scHolography.sc=high.res.sp, scHolography.sp=low.res.sp,adj.mtx=adj.mtx,est.array=dist.mat)
+  inf.obj$scHolography.sc$x3d_sp<-l_3d[,1]
+  inf.obj$scHolography.sc$y3d_sp<-l_3d[,2]
+  inf.obj$scHolography.sc$z3d_sp<-l_3d[,3]
+  inf.obj
+}

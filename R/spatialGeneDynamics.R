@@ -229,6 +229,10 @@ DoMultiBarHeatmap <- function (object,
 #' @import Seurat
 #' @import grid
 #' @import cowplot
+#' @import igraph
+#' @import viridis
+#' @import colorspace
+
 relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster,plotByDist=F,geneOI=NULL,
                                     annotationToUse="orig.cluster",assayToUse="SCT", quant.left=0.1, quant.right=0.9,
                                     nCperL=NULL,nL=NULL,heatmapGp=NULL,pal="Paired",n.neighbor=30,extreme.comp=F,heatmap.pal="viridis"){
@@ -287,12 +291,13 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
     close.ind <-which(query.to.ref.dis<quantile(query.to.ref.dis,quant.left))
     far.ind <- which(query.to.ref.dis>quantile(query.to.ref.dis,quant.right))
     layer.seq <- rep(NA,length(query.cluster.ind))
-    layer.seq[close.ind]<-paste(paste(query.cluster,collapse = "_"),"1Close",sep = "_")
-    layer.seq[far.ind]<-paste(paste(query.cluster,collapse = "_"),"3Far",sep = "_")
-    layer.seq[which(is.na(layer.seq))]<-paste(paste(query.cluster,collapse = "_"),"2Mid",sep = "_")
+    layer.seq[close.ind]<-paste(paste(query.cluster,collapse = "_"),"1Proximal",sep = "_")
+    layer.seq[far.ind]<-paste(paste(query.cluster,collapse = "_"),"3Distal",sep = "_")
+    layer.seq[which(is.na(layer.seq))]<-paste(paste(query.cluster,collapse = "_"),"2Intermediate",sep = "_")
     df <- data.frame(dist=query.to.ref.dis)
     p <- ggplot2::ggplot(df, ggplot2::aes(x=dist)) +
       ggplot2::geom_density()+ ggplot2::geom_vline(ggplot2::aes(xintercept=quantile(dist,quant.left)),color="blue", linetype="dashed", size=1)+ ggplot2::geom_vline(ggplot2::aes(xintercept=quantile(dist,(quant.right))),color="blue", linetype="dashed", size=1)
+    dist.plot <- p
     show(p)
   }else{
     layer.seq <- rep(NA,length(query.cluster.ind))
@@ -313,10 +318,10 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
   query.cluster.sub<-subset(scHolography.sc,cells = c(query.cluster.ind,ref.cluster.ind))
   query.cluster.sub$cal.dist <- (c(query.to.ref.dis,rep(NA,length(ref.cluster.ind))))
 
-  query.cluster.sub[[paste(paste(query.cluster,collapse = "_"),paste(ref.cluster,collapse = "_"),sep = "To")]]<-factor(c(layer.seq,as.character(scHolography.sc[[annotationToUse]][[1]][ref.cluster.ind])),levels=c(stringr::str_sort(unique(layer.seq),numeric = T),ref.cluster))
+  query.cluster.sub[[paste(paste(query.cluster,collapse = "_"),paste(ref.cluster,collapse = "_"),sep = "To")]]<-factor(c(layer.seq,as.character(scHolography.sc[[annotationToUse]][[1]][ref.cluster.ind])),levels=c(ref.cluster,stringr::str_sort(unique(layer.seq),numeric = T)))
 
   if(extreme.comp){
-    query.cluster.sub <- subset(query.cluster.sub, cells=which(query.cluster.sub[[paste(paste(query.cluster,collapse = "_"),paste(ref.cluster,collapse = "_"),sep = "To")]]!=paste(paste(query.cluster,collapse = "_"),"2Mid",sep = "_")))
+    query.cluster.sub <- subset(query.cluster.sub, cells=which(query.cluster.sub[[paste(paste(query.cluster,collapse = "_"),paste(ref.cluster,collapse = "_"),sep = "To")]]!=paste(paste(query.cluster,collapse = "_"),"2Intermediate",sep = "_")))
   }
 
   query.cluster.sub <- Seurat::SetIdent(query.cluster.sub,
@@ -342,12 +347,14 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
       p1 <- DoMultiBarHeatmap(subset(query.cluster.sub,cells = which((query.cluster.sub@active.ident %in% ref.cluster)==F)),assay = assayToUse,
                               features = top10$gene,additional.group.by = if(is.null(heatmapGp)==F){heatmapGp},label = T,palette = pal) +
         Seurat::NoLegend()+ggplot2::scale_fill_gradientn(colors = heat.col)
+      expr.plot <- p1
       show(p1)
     }
   }else{
     obj.sub <- subset(query.cluster.sub,cells = which((query.cluster.sub@active.ident %in% ref.cluster)==F))
     p1 <- DoMultiBarHeatmap(obj.sub,features = geneOI, assay = assayToUse,draw.lines = if(plotByDist){F}else{T},additional.group.by = if(is.null(heatmapGp)==F){heatmapGp},label = if(plotByDist){F}else{T},palette = pal) + Seurat::NoLegend()+ggplot2::scale_fill_gradientn(colors = heat.col)
     if(plotByDist==F){
+      expr.plot <- p1
       show(p1)
     }else{
 
@@ -356,22 +363,314 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
 
       obj.sub[[annotationToUse]][[1]] <-droplevels(obj.sub[[annotationToUse]][[1]])
       labal.col<-colorRampPalette(brewer.pal(12, pal))(length(levels(scHolography.sc[[annotationToUse]][[1]])))
-      p<- Seurat::DoHeatmap(obj.sub,features = fea[1],group.by = annotationToUse,group.colors =labal.col[unlist(lapply(levels(obj.sub[[annotationToUse]][[1]] ),function(x){which(levels(scHolography.sc[[annotationToUse]][[1]])%in%x)}))] )+ggplot2::scale_fill_gradientn(colors = colorRampPalette(brewer.pal(12, pal))(100),name="Distance",labels=c("close","far"),n.breaks=2)
+      p<- Seurat::DoHeatmap(obj.sub,features = fea[1],group.by = annotationToUse,group.colors =labal.col[unlist(lapply(levels(obj.sub[[annotationToUse]][[1]] ),function(x){which(levels(scHolography.sc[[annotationToUse]][[1]])%in%x)}))] )+ggplot2::scale_fill_gradientn(colors = colorRampPalette(brewer.pal(12, pal))(100),name="Distance",labels=c("Proximal","Distal"),n.breaks=2)
       grid::grid.newpage()
       legend <- cowplot::get_legend(p)
-      show( cowplot::plot_grid( p1, NULL, legend, rel_widths = c(1, -0.1, 1), align = "hv",nrow = 1 ))
+      expr.plot <- cowplot::plot_grid( p1, NULL, legend, rel_widths = c(1, -0.1, 1), align = "hv",nrow = 1 )
+      show( expr.plot)
 
     }
   }
 
   scHolography.obj$scHolography.sc <- query.cluster.sub
-  if(exists("top10")){list(scHolography.obj=scHolography.obj,DEG=top10)}else{list(scHolography.obj=scHolography.obj,DEG=NULL)}
+  if(exists("top10")){
+    if(exists("dist.plot")){
+      list(scHolography.obj=scHolography.obj,DEG=top10,dist.plot=dist.plot,expr.plot=expr.plot)
+    }else{
+      list(scHolography.obj=scHolography.obj,DEG=top10,expr.plot=expr.plot)
+    }
+  }else{
+    if(exists("dist.plot")){
+      list(scHolography.obj=scHolography.obj,DEG=NULL,dist.plot=dist.plot,expr.plot=expr.plot)
+    }else{
+      list(scHolography.obj=scHolography.obj,DEG=NULL,expr.plot=expr.plot)
+    }
+  }
+}
+
+#' Find Gene Spatial Dynamics
+#' @import Seurat
+#' @import dplyr
+#' @import RColorBrewer
+#' @import ggplot2
+#' @import MASS
+#' @import igraph
+#' @import viridis
+#' @import colorspace
+#' @import stringr
+#' @export
+findGeneSpatialDynamics  <- function (scHolography.obj, query.cluster, ref.cluster, annotationToUse = "orig.cluster",
+                                      assayToUse = "SCT", n.neighbor = 30,n.background=100,back.sig =F)
+{
+
+  #plotByDist = F; geneOI = NULL; annotationToUse = "celltype"; assayToUse = "SCT";quant.left = 0.1; quant.right = 0.9; nCperL = NULL ;nL = NULL;heatmapGp = NULL; pal = "Paired"; n.neighbor = 30;extreme.comp = F;heatmap.pal = "viridis"
+  scHolography.sc <- scHolography.obj$scHolography.sc
+  scHolography.sc[[annotationToUse]][[1]] <- unlist(lapply(as.character(scHolography.sc[[annotationToUse]][[1]]),
+                                                           function(x) paste0(strsplit(x, split = " ")[[1]], collapse = "_")))
+  scHolography.sc[[annotationToUse]][[1]] <- unlist(lapply(as.character(scHolography.sc[[annotationToUse]][[1]]),
+                                                           function(x) paste0(strsplit(x, split = "/")[[1]], collapse = "_")))
+  scHolography.sc[[annotationToUse]][[1]] <- factor(scHolography.sc[[annotationToUse]][[1]],
+                                                    levels = stringr::str_sort(unique(scHolography.sc[[annotationToUse]][[1]]),
+                                                                               numeric = T))
+  query.cluster <- unlist(lapply(as.character(query.cluster),
+                                 function(x) paste0(strsplit(x, split = " ")[[1]], collapse = "_")))
+  query.cluster <- unlist(lapply(as.character(query.cluster),
+                                 function(x) paste0(strsplit(x, split = "/")[[1]], collapse = "_")))
+  ref.cluster <- unlist(lapply(as.character(ref.cluster), function(x) paste0(strsplit(x,
+                                                                                      split = " ")[[1]], collapse = "_")))
+  ref.cluster <- unlist(lapply(as.character(ref.cluster), function(x) paste0(strsplit(x,
+                                                                                      split = "/")[[1]], collapse = "_")))
+  if (sum(is.na(as.numeric(as.character(levels(scHolography.sc[["orig.cluster"]][[1]]))))) ==
+      0) {
+    scHolography.sc[[annotationToUse]][[1]] <- factor(paste("c",
+                                                            scHolography.sc[[annotationToUse]][[1]], sep = ""),
+                                                      levels = paste("c", levels(scHolography.sc[[annotationToUse]][[1]]),
+                                                                     sep = ""))
+    query.cluster <- paste("c", query.cluster, sep = "")
+    ref.cluster <- paste("c", ref.cluster, sep = "")
+  }
+  query.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]] %in%
+                               query.cluster)
+  ref.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]] %in%
+                             ref.cluster)
+  graph <- igraph::graph_from_adjacency_matrix(scHolography.obj$adj.mtx,
+                                               mode = "undirected")
+  dist <- igraph::distances(graph, mode = "out")
+  clus.dist <- dist[query.cluster.ind, ref.cluster.ind]
+  query.to.ref.dis <- (colMeans(apply(clus.dist, 1, sort)[1:n.neighbor,
+  ]))
+
+  names(query.to.ref.dis) <- colnames(scHolography.sc)[query.cluster.ind]
+  feature.obj <-subset(scHolography.sc,cells = query.cluster.ind)
+  feature.obj <- SCTransform(feature.obj)
+  glm.reg <- lapply(VariableFeatures(feature.obj), function(x){
+    dat <-data.frame(dist=query.to.ref.dis,expr=as.numeric(scHolography.sc@assays[[assayToUse]]@data[x,query.cluster.ind]))
+    suppressWarnings( mod <- glm(expr ~ dist, dat, family = "poisson"))
+    if(back.sig){
+      back.sig<-lapply(1:n.background,function(y){
+        set.seed(y)
+        mod.shuf <- glm(dat$expr ~ sample(dat$dist), family = binomial)
+        summary(mod.shuf)$coefficients[2,4]
+      })
+      back.sig<-unlist(back.sig)
+      p.background <- ( sum(summary(mod)$coefficients[2,4]>back.sig)+1)/(n.background+1)
+      names(p.background) <- "p.background"
+      c(summary(mod)$coefficients[2,],p.background)
+    }else{
+      summary(mod)$coefficients[2,]
+    }
+
+  })
+
+  reg.mat <-do.call(rbind,glm.reg)
+  rownames(reg.mat) <- VariableFeatures(feature.obj)
+  reg.mat <-as.data.frame(reg.mat)
+  arrange(reg.mat,`z value`)
+}
+
+
+#' Expression by Distance Plot
+#' @import Seurat
+#' @import dplyr
+#' @import RColorBrewer
+#' @import ggplot2
+#' @import igraph
+#' @import viridis
+#' @import colorspace
+#' @import stringr
+#' @export
+expressionByDistPlot <- function(scHolography.obj, query.cluster, ref.cluster, geneOI,annotationToUse = "orig.cluster", assayToUse = "SCT",
+                                 pal = "Paired", n.neighbor = 30){
+  scHolography.sc <- scHolography.obj$scHolography.sc
+  scHolography.sc[[annotationToUse]][[1]] <- unlist(lapply(as.character(scHolography.sc[[annotationToUse]][[1]]),
+                                                           function(x) paste0(strsplit(x, split = " ")[[1]], collapse = "_")))
+  scHolography.sc[[annotationToUse]][[1]] <- unlist(lapply(as.character(scHolography.sc[[annotationToUse]][[1]]),
+                                                           function(x) paste0(strsplit(x, split = "/")[[1]], collapse = "_")))
+  scHolography.sc[[annotationToUse]][[1]] <- factor(scHolography.sc[[annotationToUse]][[1]],
+                                                    levels = stringr::str_sort(unique(scHolography.sc[[annotationToUse]][[1]]),
+                                                                               numeric = T))
+  query.cluster <- unlist(lapply(as.character(query.cluster),
+                                 function(x) paste0(strsplit(x, split = " ")[[1]], collapse = "_")))
+  query.cluster <- unlist(lapply(as.character(query.cluster),
+                                 function(x) paste0(strsplit(x, split = "/")[[1]], collapse = "_")))
+  ref.cluster <- unlist(lapply(as.character(ref.cluster), function(x) paste0(strsplit(x,
+                                                                                      split = " ")[[1]], collapse = "_")))
+  ref.cluster <- unlist(lapply(as.character(ref.cluster), function(x) paste0(strsplit(x,
+                                                                                      split = "/")[[1]], collapse = "_")))
+  if (sum(is.na(as.numeric(as.character(levels(scHolography.sc[["orig.cluster"]][[1]]))))) ==
+      0) {
+    scHolography.sc[[annotationToUse]][[1]] <- factor(paste("c",
+                                                            scHolography.sc[[annotationToUse]][[1]], sep = ""),
+                                                      levels = paste("c", levels(scHolography.sc[[annotationToUse]][[1]]),
+                                                                     sep = ""))
+    query.cluster <- paste("c", query.cluster, sep = "")
+    ref.cluster <- paste("c", ref.cluster, sep = "")
+  }
+  query.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]] %in%
+                               query.cluster)
+  ref.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]] %in%
+                             ref.cluster)
+  graph <- igraph::graph_from_adjacency_matrix(scHolography.obj$adj.mtx,
+                                               mode = "undirected")
+  dist <- igraph::distances(graph, mode = "out")
+  clus.dist <- dist[query.cluster.ind, ref.cluster.ind]
+  query.to.ref.dis <- (colMeans(apply(clus.dist, 1, sort)[1:n.neighbor,
+  ]))
+
+  names(query.to.ref.dis) <- colnames(scHolography.sc)[query.cluster.ind]
+
+
+  plot.ls<-lapply(geneOI,function(x){
+    dat <-data.frame(dist=query.to.ref.dis,expr=as.numeric(scHolography.sc@assays[[assayToUse]]@data[x,query.cluster.ind]))
+    #dat$expr <- dat$expr/max(dat$expr)
+    suppressWarnings(p<-ggplot(dat, aes(x=dist, y=expr)) + geom_point(alpha=.5) +stat_smooth(method="glm", se=T, method.args = list(family="poisson")) +theme_classic()+ggtitle(as.character(x))
+    )
+    p
+  })
+  names(plot.ls)<-geneOI
+  plot.ls
 
 }
 
 
-#' Find Space Driver Gene
+#' Spatial Dynamics Heatmap
+#' @import Seurat
+#' @import dplyr
+#' @import RColorBrewer
+#' @import ggplot2
+#' @import igraph
+#' @import viridis
+#' @import colorspace
+#' @import stringr
 #' @export
+
+spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.cluster,
+                                      geneOI = NULL, annotationToUse = "orig.cluster", assayToUse = "RNA",
+                                      heatmapGp = NULL, pal = "Paired", n.neighbor = 30,
+                                      heatmap.pal = "viridis")
+{
+  scHolography.sc <- scHolography.obj$scHolography.sc
+  scHolography.sc[[annotationToUse]][[1]] <- unlist(lapply(as.character(scHolography.sc[[annotationToUse]][[1]]),
+                                                           function(x) paste0(strsplit(x, split = " ")[[1]], collapse = "_")))
+  scHolography.sc[[annotationToUse]][[1]] <- unlist(lapply(as.character(scHolography.sc[[annotationToUse]][[1]]),
+                                                           function(x) paste0(strsplit(x, split = "/")[[1]], collapse = "_")))
+  scHolography.sc[[annotationToUse]][[1]] <- factor(scHolography.sc[[annotationToUse]][[1]],
+                                                    levels = stringr::str_sort(unique(scHolography.sc[[annotationToUse]][[1]]),
+                                                                               numeric = T))
+  query.cluster <- unlist(lapply(as.character(query.cluster),
+                                 function(x) paste0(strsplit(x, split = " ")[[1]], collapse = "_")))
+  query.cluster <- unlist(lapply(as.character(query.cluster),
+                                 function(x) paste0(strsplit(x, split = "/")[[1]], collapse = "_")))
+  ref.cluster <- unlist(lapply(as.character(ref.cluster), function(x) paste0(strsplit(x,
+                                                                                      split = " ")[[1]], collapse = "_")))
+  ref.cluster <- unlist(lapply(as.character(ref.cluster), function(x) paste0(strsplit(x,
+                                                                                      split = "/")[[1]], collapse = "_")))
+  if (heatmap.pal == "rdbu") {
+    heat.col <- rev(RColorBrewer::brewer.pal(n = 25, name = "RdBu"))
+  }else if (heatmap.pal == "magma") {
+    heat.col <- viridis::viridis(25, option = "A")
+  }else if (heatmap.pal == "rdbu_1") {
+    heat.col <- colorspace::diverge_hsv(25)
+  }else {
+    heat.col <- viridis::viridis(25)
+  }
+  if (sum(is.na(as.numeric(as.character(levels(scHolography.sc[[annotationToUse]][[1]]))))) == 0) {
+    scHolography.sc[[annotationToUse]][[1]] <- factor(paste("c", scHolography.sc[[annotationToUse]][[1]], sep = ""),
+                                                      levels = paste("c", levels(scHolography.sc[[annotationToUse]][[1]]), sep = ""))
+    query.cluster <- paste("c", query.cluster, sep = "")
+    ref.cluster <- paste("c", ref.cluster, sep = "")
+  }
+  query.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]] %in%
+                               query.cluster)
+  ref.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]] %in%
+                             ref.cluster)
+  graph <- igraph::graph_from_adjacency_matrix(scHolography.obj$adj.mtx,
+                                               mode = "undirected")
+  dist <- igraph::distances(graph, mode = "out")
+  clus.dist <- dist[query.cluster.ind, ref.cluster.ind]
+  query.to.ref.dis <- (colMeans(apply(clus.dist, 1, sort)[1:n.neighbor, ]))
+
+  nL <- length(unique(query.to.ref.dis))
+  layer.seq <- rep(NA, length(query.cluster.ind))
+  for (i in 1:(nL)) {
+    l.ind <- which(query.to.ref.dis %in% (sort(unique(query.to.ref.dis))[i]) == T)
+    layer.seq[l.ind] <- paste(paste(query.cluster,  collapse = "_"), i, sep = "_")
+  }
+
+  query.cluster.sub <- subset(scHolography.sc, cells = c(query.cluster.ind,
+                                                         ref.cluster.ind))
+  query.cluster.sub$cal.dist <- (c(query.to.ref.dis, rep(NA,
+                                                         length(ref.cluster.ind))))
+  query.cluster.sub[[paste(paste(query.cluster, collapse = "_"),
+                           paste(ref.cluster, collapse = "_"), sep = "To")]] <- factor(c(layer.seq,
+                                                                                         as.character(scHolography.sc[[annotationToUse]][[1]][ref.cluster.ind])),
+                                                                                       levels = c(stringr::str_sort(unique(layer.seq), numeric = T),
+                                                                                                  ref.cluster))
+  query.cluster.sub <- Seurat::SetIdent(query.cluster.sub,
+                                        value = paste(paste(query.cluster, collapse = "_"), paste(ref.cluster,
+                                                                                                  collapse = "_"), sep = "To"), sep = "To")
+  if (is.null(geneOI)) {
+    show("Need the Gene of Interest list if ploting by ordered distance")
+  }
+  else {
+    obj.sub <- subset(query.cluster.sub, cells = which((query.cluster.sub@active.ident %in%
+                                                          ref.cluster) == F))
+    if(assayToUse=="RNA"){
+      DefaultAssay(obj.sub) <- "RNA"
+      obj.sub <-NormalizeData(obj.sub)
+      obj.sub <- ScaleData(obj.sub)
+      obj.sub <- FindVariableFeatures(obj.sub,nfeatures = 5000)
+    }
+
+    p1 <- DoMultiBarHeatmap(obj.sub, features = geneOI,
+                            assay = assayToUse, draw.lines = F, size = 3, disPlot = T, additional.group.by = annotationToUse,
+                            label = F, palette = pal) + Seurat::NoLegend() +
+      ggplot2::scale_fill_gradientn(colors = heat.col) +
+      ggplot2::theme(legend.title = ggplot2::element_blank())
+    fea <- Seurat::VariableFeatures(obj.sub)
+    obj.sub[[annotationToUse]][[1]] <- droplevels(obj.sub[[annotationToUse]][[1]])
+    labal.col <- colorRampPalette(brewer.pal(12, pal))(length(levels(scHolography.sc[[annotationToUse]][[1]])))
+    p <- Seurat::DoHeatmap(obj.sub, features = fea[1],
+                           group.by = annotationToUse, group.colors = labal.col[unlist(lapply(levels(obj.sub[[annotationToUse]][[1]]),
+                                                                                              function(x) {
+                                                                                                which(levels(scHolography.sc[[annotationToUse]][[1]]) %in%
+                                                                                                        x)
+                                                                                              }))]) + ggplot2::scale_fill_gradientn(colors = colorRampPalette(brewer.pal(12,
+                                                                                                                                                                         pal))(100), name = "Distance", labels = c("close",
+                                                                                                                                                                                                                   "far"), n.breaks = 2)
+    grid::grid.newpage()
+    legend <- cowplot::get_legend(p)
+    (cowplot::plot_grid(p1, NULL, legend, rel_widths = c(1, -0.1, 1), align = "hv", nrow = 1))
+
+  }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#' Find Space Driver Gene
 #' @import dplyr
 #' @import pracma
 #' @import stats
@@ -427,7 +726,6 @@ findDriverGene <- function(scHolography.obj,query.cluster,ref.cluster,k1=1.96,k2
 }
 
 #' Visualization of Space Driver Genes
-#' @export
 #' @import ggplot2
 
 driverGenePlot <- function(findDG.obj,gene){
