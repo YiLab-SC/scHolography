@@ -469,8 +469,10 @@ findGeneSpatialDynamics  <- function (scHolography.obj, query.cluster, ref.clust
   reg.mat$Estimate <- as.numeric(reg.mat$Estimate)
   reg.mat$`Std. Error` <- as.numeric(reg.mat$`Std. Error` )
   reg.mat$`Pr(>|z|)` <- as.numeric(reg.mat$`Pr(>|z|)`)
-  rownames(reg.mat) <- reg.mat$gene
-  arrange(reg.mat,`z value`)
+  reg.mat$`z value` <- as.numeric(reg.mat$`z value`)
+  out <- arrange(reg.mat,`z value`)
+  rownames(out) <- out$gene
+  out
 }
 
 
