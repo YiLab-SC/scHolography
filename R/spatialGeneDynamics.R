@@ -457,7 +457,8 @@ findGeneSpatialDynamics  <- function (scHolography.obj, query.cluster, ref.clust
       names(p.background) <- "p.background"
       c(summary(mod)$coefficients[2,],p.background)
     }else{
-      summary(mod)$coefficients[2,]
+      names(x) <- "gene"
+      c(x,summary(mod)$coefficients[2,])
     }
 
   })
@@ -465,6 +466,7 @@ findGeneSpatialDynamics  <- function (scHolography.obj, query.cluster, ref.clust
   reg.mat <-do.call(rbind,glm.reg)
   reg.mat <-as.data.frame(reg.mat)
   rownames(reg.mat) <- VariableFeatures(feature.obj)
+  show( rownames(reg.mat))
   arrange(reg.mat,`z value`)
 }
 
