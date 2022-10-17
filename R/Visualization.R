@@ -5,7 +5,7 @@
 #' @import plotly
 #' @import Seurat
 
-scHolographyPlot<-function(scHolography.obj, dim=3, cells=NULL,feature=NULL,cutoff=NULL, color.by="orig.cluster", dot.size = 5 , palette="Paired", highlight=NULL,assayToUse="SCT",feature.pal){
+scHolographyPlot<-function(scHolography.obj, dim=3, cells=NULL,feature=NULL,cutoff=NULL, color.by="orig.cluster", dot.size = 5 , palette="Paired", highlight=NULL,assayToUse="SCT",feature.pal="viridis"){
   scHolography.sc<-scHolography.obj$scHolography.sc
   if(is.null(levels(scHolography.sc[[color.by]][[1]]))){
     scHolography.sc[[color.by]][[1]]<-as.factor(scHolography.sc[[color.by]][[1]])
