@@ -637,7 +637,7 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
     fea <- Seurat::VariableFeatures(obj.sub)
     obj.sub[[annotationToUse]][[1]] <- droplevels(obj.sub[[annotationToUse]][[1]])
     labal.col <- colorRampPalette(brewer.pal(12, pal))(length(levels(scHolography.sc[[annotationToUse]][[1]])))
-    p <- Seurat::DoHeatmap(obj.sub, features = fea[1],
+    p <- Seurat::DoHeatmap(obj.sub, features = fea[1], label=FALSE,
                            group.by = annotationToUse, group.colors = labal.col[unlist(lapply(levels(obj.sub[[annotationToUse]][[1]]),
                                                                                               function(x) {
                                                                                                 which(levels(scHolography.sc[[annotationToUse]][[1]]) %in%
