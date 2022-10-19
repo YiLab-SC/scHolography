@@ -14,7 +14,8 @@ scHolographyPlot(
   dot.size = 5,
   palette = "Paired",
   highlight = NULL,
-  assayToUse = "SCT"
+  assayToUse = "SCT",
+  feature.pal = "viridis"
 )
 }
 \description{
