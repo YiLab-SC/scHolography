@@ -335,7 +335,7 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
   if(plotByDist==F){
     if(is.null(geneOI)){
       marker.obj <- subset(query.cluster.sub,cells = which((query.cluster.sub@active.ident %in% ref.cluster)==F))
-      DefaultAssay(marker.obj) <- "RNA"
+      Seurat::DefaultAssay(marker.obj) <- "RNA"
       marker.obj <- Seurat::NormalizeData(marker.obj)
       all.genes <- rownames(marker.obj)
       marker.obj <- Seurat::ScaleData(marker.obj, features = all.genes)
@@ -618,6 +618,13 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
                                                                                          as.character(scHolography.sc[[annotationToUse]][[1]][ref.cluster.ind])),
                                                                                        levels = c(stringr::str_sort(unique(layer.seq), numeric = T),
                                                                                                   ref.cluster))
+  if(length(intersect(query.cluster,ref.cluster))>0){
+    names.ls <-colnames(query.cluster.sub)
+    ind.rg <-((length(layer.seq)+1):ncol(query.cluster.sub))
+    names.ls[ind.rg]<-paste(names.ls[ind.rg],"_ref",sep = "")
+    query.cluster.sub <- Seurat::RenameCells(query.cluster.sub,new.names =names.ls)
+  }
+
   query.cluster.sub <- Seurat::SetIdent(query.cluster.sub,
                                         value = paste(paste(query.cluster, collapse = "_"), paste(ref.cluster,
                                                                                                   collapse = "_"), sep = "To"), sep = "To")
@@ -628,10 +635,10 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
     obj.sub <- subset(query.cluster.sub, cells = which((query.cluster.sub@active.ident %in%
                                                           ref.cluster) == F))
     if(assayToUse=="RNA"){
-      DefaultAssay(obj.sub) <- "RNA"
-      obj.sub <-NormalizeData(obj.sub)
-      obj.sub <- ScaleData(obj.sub)
-      obj.sub <- FindVariableFeatures(obj.sub,nfeatures = 5000)
+      Seurat::DefaultAssay(obj.sub) <- "RNA"
+      obj.sub <-Seurat::NormalizeData(obj.sub)
+      obj.sub <- Seurat::ScaleData(obj.sub)
+      obj.sub <- Seurat::FindVariableFeatures(obj.sub,nfeatures = 5000)
     }
 
     p1 <- DoMultiBarHeatmap(obj.sub, features = geneOI,
