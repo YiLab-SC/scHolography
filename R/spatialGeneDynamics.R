@@ -319,7 +319,12 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
   query.cluster.sub$cal.dist <- (c(query.to.ref.dis,rep(NA,length(ref.cluster.ind))))
 
   query.cluster.sub[[paste(paste(query.cluster,collapse = "_"),paste(ref.cluster,collapse = "_"),sep = "To")]]<-factor(c(layer.seq,as.character(scHolography.sc[[annotationToUse]][[1]][ref.cluster.ind])),levels=c(ref.cluster,stringr::str_sort(unique(layer.seq),numeric = T)))
-
+  if(length(intersect(query.cluster,ref.cluster))>0){
+    names.ls <-colnames(query.cluster.sub)
+    ind.rg <-((length(layer.seq)+1):ncol(query.cluster.sub))
+    names.ls[ind.rg]<-paste(names.ls[ind.rg],"_ref",sep = "")
+    query.cluster.sub <- Seurat::RenameCells(query.cluster.sub,new.names =names.ls)
+  }
   if(extreme.comp){
     query.cluster.sub <- subset(query.cluster.sub, cells=which(query.cluster.sub[[paste(paste(query.cluster,collapse = "_"),paste(ref.cluster,collapse = "_"),sep = "To")]]!=paste(paste(query.cluster,collapse = "_"),"2Intermediate",sep = "_")))
   }
@@ -363,7 +368,7 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
 
       obj.sub[[annotationToUse]][[1]] <-droplevels(obj.sub[[annotationToUse]][[1]])
       labal.col<-colorRampPalette(brewer.pal(12, pal))(length(levels(scHolography.sc[[annotationToUse]][[1]])))
-      p<- Seurat::DoHeatmap(obj.sub,features = fea[1],group.by = annotationToUse,group.colors =labal.col[unlist(lapply(levels(obj.sub[[annotationToUse]][[1]] ),function(x){which(levels(scHolography.sc[[annotationToUse]][[1]])%in%x)}))] )+ggplot2::scale_fill_gradientn(colors = colorRampPalette(brewer.pal(12, pal))(100),name="Distance",labels=c("Proximal","Distal"),n.breaks=2)
+      p<- Seurat::DoHeatmap(obj.sub,label = F,features = fea[1],group.by = annotationToUse,group.colors =labal.col[unlist(lapply(levels(obj.sub[[annotationToUse]][[1]] ),function(x){which(levels(scHolography.sc[[annotationToUse]][[1]])%in%x)}))] )+ggplot2::scale_fill_gradientn(colors = colorRampPalette(brewer.pal(12, pal))(100),name="Distance",labels=c("Proximal","Distal"),n.breaks=2)
       grid::grid.newpage()
       legend <- cowplot::get_legend(p)
       expr.plot <- cowplot::plot_grid( p1, NULL, legend, rel_widths = c(1, -0.1, 1), align = "hv",nrow = 1 )
