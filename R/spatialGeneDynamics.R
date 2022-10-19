@@ -222,7 +222,6 @@ DoMultiBarHeatmap <- function (object,
 
 findDiffGeneDynamics <- function(gene.dyn1, gene.dyn2){
   inter.gene <- intersect(rownames(gene.dyn1),rownames(gene.dyn2))
-  show(length(inter.gene))
   gene.dyn1.sub <- gene.dyn1[rownames(gene.dyn1)%in%inter.gene,]
   gene.dyn2.sub <- gene.dyn2[rownames(gene.dyn2)%in%inter.gene,]
 
