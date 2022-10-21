@@ -221,20 +221,35 @@ DoMultiBarHeatmap <- function (object,
 #' @export
 
 findDiffGeneDynamics <- function(gene.dyn1, gene.dyn2){
-  inter.gene <- intersect(rownames(gene.dyn1),rownames(gene.dyn2))
-  gene.dyn1.sub <- gene.dyn1[rownames(gene.dyn1)%in%inter.gene,]
-  gene.dyn2.sub <- gene.dyn2[rownames(gene.dyn2)%in%inter.gene,]
-
+  inter.gene <- intersect(rownames(gene.dyn1), rownames(gene.dyn2))
+  show(length(inter.gene))
+  gene.dyn1.sub <- gene.dyn1[rownames(gene.dyn1) %in% inter.gene,
+  ]
+  gene.dyn2.sub <- gene.dyn2[rownames(gene.dyn2) %in% inter.gene,
+  ]
   gene.dyn1.sub$rank <- 1:nrow(gene.dyn1.sub)
-  rank1 <-  gene.dyn1.sub$rank
+  rank1 <- gene.dyn1.sub$rank
   names(rank1) <- gene.dyn1.sub$gene
-
   gene.dyn2.sub$rank <- 1:nrow(gene.dyn2.sub)
-  rank2 <-  gene.dyn2.sub$rank
+  rank2 <- gene.dyn2.sub$rank
   names(rank2) <- gene.dyn2.sub$gene
+  rank.dif <- sort(rank1 - rank2[names(rank1)])
+  rank1.ord <- rank1[names(rank.dif)]
+  rank2.ord <- rank2[names(rank.dif)]
+  sig <-unlist(lapply(1:length(rank.dif), function(x){
+    intermediate <- pnorm(rank2.ord[x],mean = mean(rank.dif)+rank1.ord[x],sd = sd(rank.dif))
+    if(intermediate>=.5){
+      intermediate <- 1-intermediate
+    }
+    intermediate
+  }))
+  sig <-2*sig
+  z.sc <- ((rank.dif-mean(rank.dif))/sd(rank.dif))
 
-  rank.dif <-sort(rank1-rank2[names(rank1)])
-  rank.dif
+  out <- cbind(rank.dif,sig,z.sc)
+  rownames(out) <-names( rank.dif )
+  colnames(out) <- c("Rank.Diff","P.Val","Z.Score")
+  out<-as.data.frame(out)
 }
 
 
