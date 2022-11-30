@@ -5,14 +5,17 @@
 #' @import plotly
 #' @import Seurat
 
-scHolographyPlot<-function(scHolography.obj, dim=3, cells=NULL,feature=NULL,cutoff=NULL, color.by="orig.cluster", dot.size = 5 , palette="Paired", highlight=NULL,assayToUse="SCT",feature.pal="viridis"){
+scHolographyPlot<-function(scHolography.obj, dim=3, cells=NULL,feature=NULL,cutoff=NULL, color.by="orig.cluster", dot.size = 5 , color=NA,palette="Paired", highlight=NULL,assayToUse="SCT",feature.pal="viridis",show.grid=F,g.width=5){
   scHolography.sc<-scHolography.obj$scHolography.sc
   if(is.null(levels(scHolography.sc[[color.by]][[1]]))){
     scHolography.sc[[color.by]][[1]]<-as.factor(scHolography.sc[[color.by]][[1]])
   }
-  getPalette =colorRampPalette(brewer.pal(12, palette))
-  my.scheme = getPalette(length(levels(scHolography.sc[[color.by]][[1]])))
-
+  if(sum(is.na(color))>0){
+    getPalette =colorRampPalette(brewer.pal(12, palette))
+    my.scheme = getPalette(length(levels(scHolography.sc[[color.by]][[1]])))
+  }else{
+    my.scheme =color
+  }
 
   if (feature.pal == "rdbu") {
     fea.col <- rev(RColorBrewer::brewer.pal(n = 25, name = "RdBu"))
@@ -63,13 +66,13 @@ scHolographyPlot<-function(scHolography.obj, dim=3, cells=NULL,feature=NULL,cuto
   }else if(dim==3){
     if(is.null(highlight)){
       if(is.null(feature)){
-        out.plot<-plotly::plot_ly(x=scHolography.sc$x3d_sp[cellToPlot], y=scHolography.sc$y3d_sp[cellToPlot], z=scHolography.sc$z3d_sp[cellToPlot],  type="scatter3d", mode="markers", color=scHolography.sc[[color.by]][[1]][cellToPlot],colors = my.scheme,marker=list(size=dot.size))
+        out.plot<-plotly::plot_ly(x=scHolography.sc$x3d_sp[cellToPlot], y=scHolography.sc$y3d_sp[cellToPlot], z=scHolography.sc$z3d_sp[cellToPlot],  type="scatter3d", mode="markers", color=scHolography.sc[[color.by]][[1]][cellToPlot],colors = my.scheme,marker=list(size=dot.size))%>%plotly::layout(scene=list(xaxis = list(showticklabels = show.grid,gridwidth=g.width), yaxis = list( showticklabels = show.grid,gridwidth=g.width),  zaxis = list(showticklabels = show.grid,gridwidth=g.width)))
       }else{
         if(feature%in%rownames(Seurat::GetAssayData(scHolography.sc,assay =as.character(assayToUse)))){
-          out.plot<-plotly::plot_ly( x=scHolography.sc$x3d_sp[cellToPlot], y=scHolography.sc$y3d_sp[cellToPlot], z=scHolography.sc$z3d_sp[cellToPlot], colors=c(fea.col),type="scatter3d", mode="markers", color=as.vector(Seurat::GetAssayData(scHolography.sc,assay = assayToUse)[feature,])[cellToPlot],marker=list(size=dot.size))%>% plotly::layout(title=as.character(feature))
+          out.plot<-plotly::plot_ly( x=scHolography.sc$x3d_sp[cellToPlot], y=scHolography.sc$y3d_sp[cellToPlot], z=scHolography.sc$z3d_sp[cellToPlot], colors=c(fea.col),type="scatter3d", mode="markers", color=as.vector(Seurat::GetAssayData(scHolography.sc,assay = assayToUse)[feature,])[cellToPlot],marker=list(size=dot.size))%>% plotly::layout(title=as.character(feature),scene=list(xaxis = list(showticklabels = show.grid,gridwidth=g.width), yaxis = list( showticklabels = show.grid,gridwidth=g.width),  zaxis = list(showticklabels = show.grid,gridwidth=g.width)))
 
         }else{
-          out.plot<-plotly::plot_ly( x=scHolography.sc$x3d_sp[cellToPlot], y=scHolography.sc$y3d_sp[cellToPlot],z=scHolography.sc$z3d_sp[cellToPlot],  colors=c(fea.col),type="scatter3d", mode="markers", color=scHolography.sc[[feature]][[1]][cellToPlot],marker=list(size=dot.size))%>% plotly::layout(title=as.character(feature))
+          out.plot<-plotly::plot_ly( x=scHolography.sc$x3d_sp[cellToPlot], y=scHolography.sc$y3d_sp[cellToPlot],z=scHolography.sc$z3d_sp[cellToPlot],  colors=c(fea.col),type="scatter3d", mode="markers", color=scHolography.sc[[feature]][[1]][cellToPlot],marker=list(size=dot.size))%>% plotly::layout(title=as.character(feature),scene = list(xaxis = list(showticklabels = show.grid,gridwidth=g.width), yaxis = list( showticklabels = show.grid,gridwidth=g.width),  zaxis = list(showticklabels = show.grid,gridwidth=g.width)))
 
         }
       }
