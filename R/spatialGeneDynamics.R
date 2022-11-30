@@ -232,11 +232,11 @@ findDiffGeneDynamics <- function(gene.dyn1, gene.dyn2){
   gene.dyn2.sub$rank <- 1:nrow(gene.dyn2.sub)
   rank2 <- gene.dyn2.sub$rank
   names(rank2) <- gene.dyn2.sub$gene
-  rank.dif <- sort(rank1 - rank2[names(rank1)])
+  rank.dif <- sort(rank2[names(rank1)]-rank1)
   rank1.ord <- rank1[names(rank.dif)]
   rank2.ord <- rank2[names(rank.dif)]
   sig <-unlist(lapply(1:length(rank.dif), function(x){
-    intermediate <- pnorm(rank2.ord[x],mean = mean(rank.dif)+rank1.ord[x],sd = sd(rank.dif))
+    intermediate <- pnorm(rank.dif[x],mean = mean(rank.dif),sd = sd(rank.dif))
     if(intermediate>=.5){
       intermediate <- 1-intermediate
     }
@@ -249,6 +249,7 @@ findDiffGeneDynamics <- function(gene.dyn1, gene.dyn2){
   rownames(out) <-names( rank.dif )
   colnames(out) <- c("Rank.Diff","P.Val","Z.Score")
   out<-as.data.frame(out)
+  out
 }
 
 
@@ -442,7 +443,7 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
 #' @import stringr
 #' @export
 findGeneSpatialDynamics  <- function (scHolography.obj, query.cluster, ref.cluster, annotationToUse = "orig.cluster",
-                                      assayToUse = "SCT", n.neighbor = 30,n.background=100,back.sig =F)
+                                      assayToUse = "SCT", n.neighbor = 30)
 {
 
   #plotByDist = F; geneOI = NULL; annotationToUse = "celltype"; assayToUse = "SCT";quant.left = 0.1; quant.right = 0.9; nCperL = NULL ;nL = NULL;heatmapGp = NULL; pal = "Paired"; n.neighbor = 30;extreme.comp = F;heatmap.pal = "viridis"
@@ -488,20 +489,8 @@ findGeneSpatialDynamics  <- function (scHolography.obj, query.cluster, ref.clust
   glm.reg <- lapply(VariableFeatures(feature.obj), function(x){
     dat <-data.frame(dist=query.to.ref.dis,expr=as.numeric(scHolography.sc@assays[[assayToUse]]@data[x,query.cluster.ind]))
     suppressWarnings( mod <- glm(expr ~ dist, dat, family = "poisson"))
-    if(back.sig){
-      back.sig<-lapply(1:n.background,function(y){
-        set.seed(y)
-        mod.shuf <- glm(dat$expr ~ sample(dat$dist), family = binomial)
-        summary(mod.shuf)$coefficients[2,4]
-      })
-      back.sig<-unlist(back.sig)
-      p.background <- ( sum(summary(mod)$coefficients[2,4]>back.sig)+1)/(n.background+1)
-      names(p.background) <- "p.background"
-      c(summary(mod)$coefficients[2,],p.background)
-    }else{
-      names(x) <- "gene"
-      c(x,summary(mod)$coefficients[2,])
-    }
+    names(x) <- "gene"
+    c(x,summary(mod)$coefficients[2,])
 
   })
 
