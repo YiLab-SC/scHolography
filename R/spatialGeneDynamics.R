@@ -692,10 +692,106 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
 }
 
 
+#' Find Spatial Cluster
+#' @import Seurat
+#' @import dplyr
+#' @import RColorBrewer
+#' @import ggplot2
+#' @import d3heatmap
+#' @import textmineR
+#' @import factoextra
+#' @import RColorBrewer
+#' @import stringr
+#' @export
+
+findSpatialCluster <-function(scHolography.obj,annotationToUse,query.cluster){
+
+  docs <- lapply(which(scHolography.obj$scHolography.sc[[annotationToUse]][[1]]%in%query.cluster),function(x){as.vector(scHolography.obj$scHolography.sc[[annotationToUse]][[1]][which(scHolography.obj$adj.mtx[x,]>0)])})
+  vocab <- unique(unlist(docs))
+  ls <- lapply(vocab, function(x){
+    unlist(lapply(docs, function(y){
+      sum(y%in%x)
+    }))
+  })
+  dtm <- matrix(unlist(ls), ncol = length(vocab),nrow = length(docs),byrow = F)
+  colnames(dtm) <- vocab
+
+  tf_mat <- TermDocFreq(dtm)
+  # TF-IDF and cosine similarity
+  tf_mat$idf[which(tf_mat$idf==0) ] <- 10^-18
+  tfidf <- t(dtm[ , tf_mat$term ]) * tf_mat$idf
+  tfidf <- t(tfidf)
+  zero.sum <- which(rowSums(tfidf)==0)
+  nonzero.sum <- which(rowSums(tfidf)!=0)
+  tfidf.sub <- tfidf[nonzero.sum,]
+  csim <- tfidf.sub / sqrt(rowSums(tfidf.sub * tfidf.sub))
+  csim <- csim %*% t(csim)
+  cdist <- as.dist(1 - csim)
+  silhouette <- fviz_nbclust((as.matrix(cdist)), kmeans, method = "silhouette")+labs(subtitle = "Silhouette method")
+  nclus <- as.numeric(silhouette$data$clusters[which.max(silhouette$data$y)])
+  heatmap <- d3heatmap(as.matrix(cdist),k_col = nclus )
+  heatmap.order <- as.numeric(heatmap$x$matrix$rows)
+  node.ls <- unlist(heatmap$x$cols)
+  entry.names <- unlist(lapply(names(node.ls),function(x){
+    temp <-unlist(strsplit(x,split = "[.]"))
+    temp[length(temp)]
+  } ))
+  label <-which(entry.names%in%"label")
+  col <- label+1
+  label.c <- node.ls[label]
+  col.c <- node.ls[col]
+
+  label.c <- as.numeric(label.c)
+  names(label.c) <- col.c
+  label.c <- sort(label.c)
+
+  sub.color <-colorRampPalette(brewer.pal(12, "Set3"))(length(unique(names(label.c))))
+  clustering <- sub.color[as.numeric(as.factor(names(label.c)))]
+  heat.matrix <- heatmap$x$params$x
+  heat.matrix.reorder <- heat.matrix[heatmap.order,heatmap.order]
+  clustering.reorder <- clustering[heatmap.order]
+  heatmap.out <- heatmap(heat.matrix.reorder, Colv = NA, Rowv = NA, RowSideColors=clustering.reorder, ColSideColors=clustering.reorder, scale="none",revC=T,labRow=F,labCol=F)
+  p_words <- colSums(dtm) / sum(dtm)
+  cluster_words <- lapply(sort(unique(clustering)), function(x){
+    rows <- dtm[ nonzero.sum[clustering == x ], ]
+    rows <- rows[ , colSums(rows) > 0 ]
+    if(is.null(dim(rows))){
+      fix <- rep(0, length(p_words))
+      fix[colSums(dtm[ nonzero.sum[clustering == x ] , ]) > 0] <-1
+      out <- fix-p_words
+      out
+    }else{
+      colSums(rows) / sum(rows) - p_words[ colnames(rows) ]
+    }
 
 
+  })
+  if(length(zero.sum)>0){
+    nclus <- nclus+1
+    rows <- dtm[ zero.sum, ]
+    rows <- rows[ , colSums(rows) > 0 ]
+    if(is.null(dim(rows))){
+      fix <- rep(0, length(p_words))
+      fix[ colSums(dtm[ zero.sum, ]) > 0 ] <-1
+      out.zero <- fix-p_words
 
+    }else{
+      out.zero <-colSums(rows) / sum(rows) - p_words[ colnames(rows) ]
+    }
+    out <- as.vector(out.zero)
 
+    cluster_words <- append(cluster_words, out)
+    names(cluster_words[[length(cluster_words)]]) <- names(out.zero)
+  }
+
+  clustering.rslt<-rep(0,length(docs))
+  clustering.rslt[nonzero.sum] <- clustering
+  clustering.rslt[zero.sum] <- nclus
+  names(cluster_words) <-  sort(unique(clustering))
+  summary.ls <- lapply(cluster_words,function(x){sort(x,decreasing = T)[sort(x,decreasing = T)>0.01]})
+  names(summary.ls) <- sort(unique(clustering))
+  list(summary=summary.ls,cluster=clustering.rslt,heatmap=heatmap.out,cdist=cdist,order=heatmap.order,cluster_words=cluster_words,ifZeroCluster=(length(zero.sum)>0))
+}
 
 
 

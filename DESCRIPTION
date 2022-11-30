@@ -30,4 +30,7 @@ Imports:
     plyr,
     MASS,
     colorspace,
-    viridis
+    viridis,
+    d3heatmap,
+    factoextra,
+    textmineR

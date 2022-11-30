@@ -10,9 +10,7 @@ findGeneSpatialDynamics(
   ref.cluster,
   annotationToUse = "orig.cluster",
   assayToUse = "SCT",
-  n.neighbor = 30,
-  n.background = 100,
-  back.sig = F
+  n.neighbor = 30
 )
 }
 \description{

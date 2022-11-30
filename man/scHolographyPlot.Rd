@@ -12,10 +12,13 @@ scHolographyPlot(
   cutoff = NULL,
   color.by = "orig.cluster",
   dot.size = 5,
+  color = NA,
   palette = "Paired",
   highlight = NULL,
   assayToUse = "SCT",
-  feature.pal = "viridis"
+  feature.pal = "viridis",
+  show.grid = F,
+  g.width = 5
 )
 }
 \description{
