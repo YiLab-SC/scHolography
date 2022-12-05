@@ -692,7 +692,7 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
 }
 
 
-#' Find Spatial Cluster
+#' Find Spatial Neighborhood
 #' @import Seurat
 #' @import dplyr
 #' @import RColorBrewer
@@ -704,7 +704,7 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
 #' @import stringr
 #' @export
 
-findSpatialCluster <-function(scHolography.obj,annotationToUse,query.cluster){
+findSpatialNeighborhood <-function(scHolography.obj,annotationToUse,query.cluster,nclus=NULL, pal="Set3"){
 
   docs <- lapply(which(scHolography.obj$scHolography.sc[[annotationToUse]][[1]]%in%query.cluster),function(x){as.vector(scHolography.obj$scHolography.sc[[annotationToUse]][[1]][which(scHolography.obj$adj.mtx[x,]>0)])})
   vocab <- unique(unlist(docs))
@@ -728,7 +728,9 @@ findSpatialCluster <-function(scHolography.obj,annotationToUse,query.cluster){
   csim <- csim %*% t(csim)
   cdist <- as.dist(1 - csim)
   silhouette <- fviz_nbclust((as.matrix(cdist)), kmeans, method = "silhouette")+labs(subtitle = "Silhouette method")
-  nclus <- as.numeric(silhouette$data$clusters[which.max(silhouette$data$y)])
+  if(is.null(nclus)){
+    nclus <- as.numeric(silhouette$data$clusters[which.max(silhouette$data$y)])
+  }
   heatmap <- d3heatmap(as.matrix(cdist),k_col = nclus )
   heatmap.order <- as.numeric(heatmap$x$matrix$rows)
   node.ls <- unlist(heatmap$x$cols)
@@ -745,52 +747,52 @@ findSpatialCluster <-function(scHolography.obj,annotationToUse,query.cluster){
   names(label.c) <- col.c
   label.c <- sort(label.c)
 
-  sub.color <-colorRampPalette(brewer.pal(12, "Set3"))(length(unique(names(label.c))))
+  sub.color <-colorRampPalette(brewer.pal(12, pal))(length(unique(names(label.c))))
   clustering <- sub.color[as.numeric(as.factor(names(label.c)))]
   heat.matrix <- heatmap$x$params$x
   heat.matrix.reorder <- heat.matrix[heatmap.order,heatmap.order]
   clustering.reorder <- clustering[heatmap.order]
   heatmap.out <- heatmap(heat.matrix.reorder, Colv = NA, Rowv = NA, RowSideColors=clustering.reorder, ColSideColors=clustering.reorder, scale="none",revC=T,labRow=F,labCol=F)
-  p_words <- colSums(dtm) / sum(dtm)
-  cluster_words <- lapply(sort(unique(clustering)), function(x){
-    rows <- dtm[ nonzero.sum[clustering == x ], ]
-    rows <- rows[ , colSums(rows) > 0 ]
-    if(is.null(dim(rows))){
-      fix <- rep(0, length(p_words))
-      fix[colSums(dtm[ nonzero.sum[clustering == x ] , ]) > 0] <-1
-      out <- fix-p_words
-      out
-    }else{
-      colSums(rows) / sum(rows) - p_words[ colnames(rows) ]
+
+
+  sub.clus <- rep("NA",ncol(scHolography.obj$scHolography.sc))
+  sub.clus <- as.character(scHolography.obj$scHolography.sc[[annotationToUse]][[1]])
+  sub.clus[which(scHolography.obj$scHolography.sc[[annotationToUse]][[1]]%in%query.cluster)] <- clustering
+  names(sub.clus) <-colnames(scHolography.obj$scHolography.sc)
+  scHolography.obj$scHolography.sc[["sub.clus"]] <- sub.clus
+
+
+  annotationToUse2 <- "sub.clus"
+  clus <- scHolography.obj$scHolography.sc[[annotationToUse]][[1]]
+  uni.clus <- stringr::str_sort(unique(clustering),numeric = T)
+
+  sig.class.ls <- lapply(uni.clus, function(ind.clus){
+
+    q.cluster <- list(c(ind.clus),uni.clus[-which(uni.clus%in%c(ind.clus))])
+    matrix.ls <-vector("list",2)
+
+    for (i in 1:2) {
+      ind <- which(scHolography.obj$scHolography.sc[[annotationToUse2]][[1]]%in%q.cluster[[i]])
+
+      matrix.this<- matrix(unlist(lapply(stringr::str_sort(unique(clus),numeric = T), function(x){
+        this.clus <- which(clus==x)
+        rowSums(scHolography.obj$adj.mtx[,this.clus])
+      })),ncol=length(stringr::str_sort(unique(clus),numeric = T)),byrow=F)
+      colnames(matrix.this) <- stringr::str_sort(unique(clus),numeric = T)
+      matrix.ls[[i]] <- matrix.this[ind,]
+
     }
 
-
+    pval.ls <- lapply(stringr::str_sort(unique(clus),numeric = T),function(x){
+      wilcox.test(matrix.ls[[1]][,x],matrix.ls[[2]][,x],alternative="greater")$p.value
+    })
+    names(pval.ls) <- stringr::str_sort(unique(clus),numeric = T)
+    unlist(pval.ls)[names(which(unlist(pval.ls)<.05))]
   })
-  if(length(zero.sum)>0){
-    nclus <- nclus+1
-    rows <- dtm[ zero.sum, ]
-    rows <- rows[ , colSums(rows) > 0 ]
-    if(is.null(dim(rows))){
-      fix <- rep(0, length(p_words))
-      fix[ colSums(dtm[ zero.sum, ]) > 0 ] <-1
-      out.zero <- fix-p_words
 
-    }else{
-      out.zero <-colSums(rows) / sum(rows) - p_words[ colnames(rows) ]
-    }
-    out <- as.vector(out.zero)
+  names(sig.class.ls) <- uni.clus
 
-    cluster_words <- append(cluster_words, out)
-    names(cluster_words[[length(cluster_words)]]) <- names(out.zero)
-  }
-
-  clustering.rslt<-rep(0,length(docs))
-  clustering.rslt[nonzero.sum] <- clustering
-  clustering.rslt[zero.sum] <- nclus
-  names(cluster_words) <-  sort(unique(clustering))
-  summary.ls <- lapply(cluster_words,function(x){sort(x,decreasing = T)[sort(x,decreasing = T)>0.01]})
-  names(summary.ls) <- sort(unique(clustering))
-  list(summary=summary.ls,cluster=clustering.rslt,heatmap=heatmap.out,cdist=cdist,order=heatmap.order,cluster_words=cluster_words,ifZeroCluster=(length(zero.sum)>0))
+  list(scHolography.obj=scHolography.obj,summary=sig.class.ls,cluster=clustering,heatmap=heatmap.out,cdist=cdist,order=heatmap.order)
 }
 
 
