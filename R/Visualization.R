@@ -98,6 +98,112 @@ scHolographyPlot<-function(scHolography.obj, dim=3, cells=NULL,feature=NULL,cuto
 
 
 
+#' Spatial Neighborhood Composition Plot
+#' @export
+#' @import RColorBrewer
+#' @import ggplot2
+#' @import stringr
+scHolographyNeighborCompPlot<-function(scHolography.obj,annotationToUse, query.cluster=NULL, pal="Paired",color=NULL,row.group.level =NULL){
+  clus <- scHolography.obj$scHolography.sc[[annotationToUse]][[1]]
+  if(is.null(query.cluster)){
+    query.cluster <- stringr::str_sort(unique(clus),numeric = T)
+  }
+
+  matrix <- matrix(ncol = length(unique(clus)),nrow = length(query.cluster), 0)
+  colnames(matrix) <-stringr::str_sort(unique(clus),numeric = T)
+  rownames(matrix) <- query.cluster
+  uni.clus <- stringr::str_sort(unique(clus),numeric = T)
+
+  for (i in query.cluster) {
+    ind <- which(clus==i)
+    tab <- table(clus[which(colSums(scHolography.obj$adj.mtx[ind,])>0)])
+    matrix[i,names(tab)] <- tab
+  }
+  data.fra <- reshape2::melt(matrix/rowSums(matrix))
+  if(is.null(row.group.level)==F){
+    data.fra$Var1 <- factor(data.fra$Var1 ,row.group.level)}
+  getPalette = colorRampPalette(brewer.pal(12,pal ))
+
+  sig.class.ls <- lapply(uni.clus, function(ind.clus){
+
+    query.cluster <- list(c(ind.clus),uni.clus[-which(uni.clus%in%c(ind.clus))])
+    matrix.ls <-vector("list",2)
+
+    for (i in 1:2) {
+      ind <- which(clus%in%query.cluster[[i]])
+
+      matrix.this<- matrix(unlist(lapply(uni.clus, function(x){
+        this.clus <- which(clus==x)
+        rowSums(scHolography.obj$adj.mtx[,this.clus])
+      })),ncol=length(uni.clus),byrow=F)
+      colnames(matrix.this) <- uni.clus
+      matrix.ls[[i]] <- matrix.this[ind,]
+
+    }
+
+    pval.ls <- lapply(uni.clus,function(x){
+      wilcox.test(matrix.ls[[1]][,x],matrix.ls[[2]][,x],alternative="greater")$p.value
+    })
+    names(pval.ls) <- uni.clus
+    unlist(pval.ls)[names(which(unlist(pval.ls)>=.05))]
+  })
+
+  names(sig.class.ls) <- uni.clus
+
+  norm.mat <- matrix/rowSums(matrix)
+  for(i in uni.clus){
+    norm.mat[i,names(sig.class.ls[[i]])] <- 0
+  }
+
+  data.fra.sig <- reshape2::melt(norm.mat)
+
+  col.use <- getPalette(length(uni.clus))
+
+  if(is.null(color)==F){
+    col.use <- color
+  }
+
+  if(is.null(row.group.level)==F){
+    data.fra.sig$Var1 <- factor(data.fra.sig$Var1 ,row.group.level)}
+  neighbor.comp <- ggplot(data.fra, aes(x=Var1, y=value,fill=Var2))+ geom_bar( position="stack", stat="identity")+theme_classic()+
+    theme(axis.text.x = element_text(angle=45, hjust=1))+scale_fill_manual(values = col.use)+labs(fill = "",x ="", y = "Composition")
+
+  neighbor.comp.sig <- ggplot(data.fra.sig, aes(x=Var1, y=value,fill=Var2))+ geom_bar( position="stack", stat="identity")+theme_classic()+
+    theme(axis.text.x = element_text(angle=45, hjust=1))+scale_fill_manual(values = col.use)+labs(fill = "",x ="", y = "Composition")
+
+
+  sig.class.ls <- lapply(uni.clus, function(ind.clus){
+
+    query.cluster <- list(c(ind.clus),uni.clus[-which(uni.clus%in%c(ind.clus))])
+    matrix.ls <-vector("list",2)
+
+    for (i in 1:2) {
+      ind <- which(clus%in%query.cluster[[i]])
+
+      matrix.this<- matrix(unlist(lapply(uni.clus, function(x){
+        this.clus <- which(clus==x)
+        rowSums(scHolography.obj$adj.mtx[,this.clus])
+      })),ncol=length(uni.clus),byrow=F)
+      colnames(matrix.this) <- uni.clus
+      matrix.ls[[i]] <- matrix.this[ind,]
+
+    }
+
+    pval.ls <- lapply(uni.clus,function(x){
+      wilcox.test(matrix.ls[[1]][,x],matrix.ls[[2]][,x],alternative="greater")$p.value
+    })
+    names(pval.ls) <- uni.clus
+    unlist(pval.ls)[names(which(unlist(pval.ls)<.05))]
+  })
+
+  names(sig.class.ls) <- uni.clus
+  list(neighbor.comp = neighbor.comp, neighbor.comp.sig=neighbor.comp.sig, significance=sig.class.ls)
+
+}
+
+
+
+
 #' Cell State Connection Plot in 3D
 #' @export
 #' @import RColorBrewer
