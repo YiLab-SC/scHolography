@@ -200,7 +200,7 @@ interpretDecomp<-function(est.array, nslot, is3D=T){
 #' Single cell 3D reconstruction
 #' @export
 #' @import igraph
-trainHolography<-function(sp.integrated,vSeed=60611,n.repeat=50,n.slot=30,n.pcUse=32,n.pcOut=32){
+trainHolography<-function(sp.integrated,vSeed=60611,n.repeat=30,n.slot=30,n.pcUse=32,n.pcOut=32){
   dat.list<-getData(sp.integrated,nPCtoOut = n.pcOut)
   train_y<-dat.list[[3]]
   test_x<-dat.list[[2]]
