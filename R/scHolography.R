@@ -14,7 +14,7 @@ seuratSCT<-function(seuratObj,ndims ){
   seuratObj <- Seurat::RunUMAP(seuratObj,dims=1:ndims,verbose = FALSE)
   seuratObj <- Seurat::FindNeighbors(seuratObj, reduction = "pca", dims = 1:ndims,verbose = FALSE)
   seuratObj <- Seurat::FindClusters(seuratObj,resolution = 0.5 ,verbose = FALSE)
-  print("Data Normalized")
+  show("Data Normalized")
   seuratObj
 }
 

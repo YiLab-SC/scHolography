@@ -39,7 +39,7 @@ devtools::install_github("YiLab-SC/scHolography")
 ```
 Load scHolography for use:
 ```r
-library("scHolography")
+library(scHolography)
 ```
 
 ## 1. scHolography 3D Reconstruction
@@ -56,6 +56,12 @@ brain_st_cortex <-readRDS("~/Downloads/brain_st_cortex.rds")
 brain_sc <- readRDS("~/Downloads/brain_sc.rds")
 ```
 
+Load packages:
+```r
+library(scHolography)
+library(dplyr)
+```
+
 scHolography can take in objects directly after quality control and automatically perform normalization before integration. `dataAlign` integrations expression data from scRNA-seq and ST modalities. `trainHolography` trains neural network models and infers a SMN graph.
 ```r
 options(future.globals.maxSize = 3000 * 1024^2)
@@ -68,9 +74,28 @@ The reconstruction results can be visualized in 3D with `scHolographyPlot`:
 scHolographyPlot(brain.obj,color.by = "cell_type")
 ```
 
+```
+scene = list(camera = list(eye = list(x = 0., y = 0.01, z = -2)))
+fig <- scHolographyPlot(brain.obj,color.by = "cell_type")%>% plotly::layout(scene = scene) 
+fig
+```
+![](img/mouse.brain.3D.svg)
 
 
 
+
+
+
+
+
+## X. Running Time
+```r
+system.time(brain.obj<-trainHolography(sp.integrated,n.repeat = 30))
+```
+```
+user  system elapsed 
+830.224 172.764 901.495 
+```
 
 
 
