@@ -680,9 +680,7 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
                                                                                               function(x) {
                                                                                                 which(levels(scHolography.sc[[annotationToUse]][[1]]) %in%
                                                                                                         x)
-                                                                                              }))]) + ggplot2::scale_fill_gradientn(colors = colorRampPalette(brewer.pal(12,
-                                                                                                                                                                         pal))(100), name = "Distance", labels = c("close",
-                                                                                                                                                                                                                   "far"), n.breaks = 2)
+                                                                                              }))]) + ggplot2::scale_fill_gradientn(colors = colorRampPalette(brewer.pal(12, pal))(100), name = "Distance", labels = c("Proximal", "Distal"), n.breaks = 2)
     grid::grid.newpage()
     legend <- cowplot::get_legend(p)
     (cowplot::plot_grid(p1, NULL, legend, rel_widths = c(1, -0.1, 1), align = "hv", nrow = 1))
