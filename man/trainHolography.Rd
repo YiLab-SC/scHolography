@@ -7,7 +7,7 @@
 trainHolography(
   sp.integrated,
   vSeed = 60611,
-  n.repeat = 50,
+  n.repeat = 30,
   n.slot = 30,
   n.pcUse = 32,
   n.pcOut = 32
