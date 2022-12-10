@@ -24,6 +24,7 @@ tf$constant("Hello Tensorflow!")
 
 Successful installation will give the output:
 ```
+Loaded TensorFlow version 2.10.0
 tf.Tensor(b'Hello Tensorflow!', shape=(), dtype=string)
 ```
 
