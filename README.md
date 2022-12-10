@@ -72,7 +72,6 @@ brain.obj<-trainHolography(sp.integrated,n.repeat = 30)
 
 The reconstruction results can be visualized in 3D with `scHolographyPlot`:
 ```r
-library(dplyr)
 scene = list(camera = list(eye = list(x = 0., y = 0.01, z = -2)))
 scHolographyPlot(brain.obj,color.by = "cell_type")%>% plotly::layout(scene = scene) 
 ```
@@ -81,13 +80,17 @@ scHolographyPlot(brain.obj,color.by = "cell_type")%>% plotly::layout(scene = sce
 ### Visualization by Features
 
 scHolography also assists visualizations of different features on the reconstructed 3D structure. Here, we show three layer neuron marker expression. 
-```
+```r
 scHolographyPlot(brain.obj,feature = "Cux2")%>% plotly::layout(scene = scene) 
-scHolographyPlot(brain.obj,feature = "Rorb")%>% plotly::layout(scene = scene) 
-scHolographyPlot(brain.obj,feature = "Foxp2")%>% plotly::layout(scene = scene) 
 ```
 ![](img/mouse.brain.figCux2.svg)
+```r
+scHolographyPlot(brain.obj,feature = "Rorb")%>% plotly::layout(scene = scene) 
+```
 ![](img/mouse.brain.figRorb.svg)
+```r
+scHolographyPlot(brain.obj,feature = "Foxp2")%>% plotly::layout(scene = scene) 
+```
 ![](img/mouse.brain.figFoxp2.svg)
 
 ## 2. SMN Distance and First-Degree Neighbors
@@ -105,11 +108,17 @@ For each cell cluster, we can further examine its inferred microenvironment by d
 ```{r}
 neighbor.comp <- scHolographyNeighborCompPlot(brain.obj,annotationToUse = "cell_type")
 neighbor.comp$neighbor.comp
-neighbor.comp$neighbor.comp.sig
-neighbor.comp$significance
 ```
 ![](img/Brain.first.degree.png)
+
+```r
+neighbor.comp$neighbor.comp.sig
+```
 ![](img/Brain.first.degree.sig.png)
+
+```r
+neighbor.comp$significance
+```
 
 ```
 $Astro
@@ -217,23 +226,23 @@ scHolographyPlot(brain.obj,color.by = "sp.neighborhood",color = p.col,cells = wh
 ```
 ![](img/mouse.astro.sp.neighborhood.svg)
 
-## 4. f 
+## 4. Expression Spatial Dynamics
+
+The findGeneSpatialDynamics function enables the investigation of the association between spatial distribution and gene expression pattern by identifying genes with significant trends with respect to the SMN distance of cells to a reference group. In this example, we look into expression spatial pattern of astrocytes using L6 glutamatergic cells as distance reference cluster. Poisson regression was performed and genes are then ordered by z values. Genes with negative values are considered to have proximal trends in space toward L6  while genes with positive z values are considered for distal trends. scHolography visualizes expression dynamics with `spatialDynamicsFeaturePlot`.
+
 ```r
 dyn.astro.to.l6 <-findGeneSpatialDynamics(brain.obj,query.cluster = "Astro",ref.cluster = c("L6 IT", "L6 CT","L6b" ),annotationToUse = "cell_type",assayToUse = "RNA")
-
 spatialDynamicsFeaturePlot(brain.obj,query.cluster = "Astro",ref.cluster = c("L6 IT", "L6 CT","L6b" ),annotationToUse = "cell_type",geneOI = c(head(dyn.astro.to.l6)$gene,tail(dyn.astro.to.l6)$gene),assayToUse = "RNA")
-dev.off()
+```
+![](img/Brain.spatialDynamicsFeaturePlot.png)
 
+scHolography also allows more detailed analysis of expression and spatial distance association with the `expressionByDistPlot` function. Here we show the expression plot of an L6 proximal gene *Id3*.
+```r
 expressionByDistPlot(brain.obj,query.cluster = "Astro",ref.cluster = c("L6 IT", "L6 CT","L6b" ),annotationToUse = "cell_type",geneOI = "Id3",assayToUse = "RNA")
 ```
-
-![](img/Brain.spatialDynamicsFeaturePlot.png)
 ![](img/Brain.expressionByDistPlot.png)
 
-
-
-
-## 5. System Information and Running Time
+## 5. Running Time of `trainHolography` and Session Information
 ```r
 system.time(brain.obj<-trainHolography(sp.integrated,n.repeat = 30))
 ```
