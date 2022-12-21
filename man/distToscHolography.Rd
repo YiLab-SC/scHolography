@@ -6,6 +6,13 @@
 \usage{
 distToscHolography(high.res.sp, low.res.sp, dist.mat)
 }
+\arguments{
+\item{high.res.sp}{Seurat Object of SC (high resolution) data}
+
+\item{low.res.sp}{Seurat Object of ST (low resolution) data}
+
+\item{dist.mat}{Estimated spatial distance matrix between cells}
+}
 \description{
 Reconstruct scHolography graph from distance matrix
 }

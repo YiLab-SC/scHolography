@@ -13,6 +13,19 @@ clusterDistanceBoxplot(
   n.neighbor = 30
 )
 }
+\arguments{
+\item{scHolography.obj}{scHolography object list}
+
+\item{annotationToUse}{Which annotation to call identities from. Default is orig.cluster}
+
+\item{query.cluster.list}{A vector of query identity types to be measured SMN distance to reference}
+
+\item{reference.cluster}{A vector of reference identity types}
+
+\item{palette}{Color palette to use for coloring. Default is Paired}
+
+\item{n.neighbor}{Number of nearest cells to use to define distance. Default is 30}
+}
 \description{
 Cluster Distance Boxplot
 }

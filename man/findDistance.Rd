@@ -12,6 +12,17 @@ findDistance(
   n.neighbor = 30
 )
 }
+\arguments{
+\item{scHolography.obj}{scHolography object list}
+
+\item{query.cluster}{A vector of query identity types}
+
+\item{ref.cluster}{A vector of reference identity types}
+
+\item{annotationToUse}{Which annotation to call identities from. Default is orig.cluster}
+
+\item{n.neighbor}{Number of nearest cells to use to define distance. Default is 30}
+}
 \description{
 Find scHolography Inferred Distance between Cell Clusters
 }

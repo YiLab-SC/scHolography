@@ -12,6 +12,17 @@ findSpatialNeighborhood(
   pal = "Set3"
 )
 }
+\arguments{
+\item{scHolography.obj}{scHolography object list}
+
+\item{annotationToUse}{Which annotation to call identities from. Default is orig.cluster}
+
+\item{query.cluster}{A vector of query identity types}
+
+\item{nclus}{Number of spatial neighborhood to cluster. Default is NULL (the number will be decided by silhouette coefficients)}
+
+\item{pal}{Color palette to use for coloring. Default is Set3}
+}
 \description{
 Find Spatial Neighborhood
 }

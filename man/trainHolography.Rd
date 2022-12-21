@@ -6,12 +6,25 @@
 \usage{
 trainHolography(
   sp.integrated,
-  vSeed = 60611,
   n.repeat = 30,
   n.slot = 30,
   n.pcUse = 32,
-  n.pcOut = 32
+  n.pcOut = 32,
+  vSeed = 60611
 )
+}
+\arguments{
+\item{sp.integrated}{Seurat Object of integrated SC and ST data}
+
+\item{n.repeat}{Number of neural network models to train. Default is 30}
+
+\item{n.slot}{Maximum number of neighbors to find for stable matching. Default is 30}
+
+\item{n.pcUse}{Number of PCs used for NN input. Default is 32}
+
+\item{n.pcOut}{Number of PCs used for NN output. Default is 32}
+
+\item{vSeed}{Random seed. Default is 60611}
 }
 \description{
 Single cell 3D reconstruction

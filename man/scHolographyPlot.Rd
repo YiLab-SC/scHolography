@@ -6,7 +6,6 @@
 \usage{
 scHolographyPlot(
   scHolography.obj,
-  dim = 3,
   cells = NULL,
   feature = NULL,
   cutoff = NULL,
@@ -18,8 +17,38 @@ scHolographyPlot(
   assayToUse = "SCT",
   feature.pal = "viridis",
   show.grid = F,
-  g.width = 5
+  g.width = 5,
+  dim = 3
 )
+}
+\arguments{
+\item{scHolography.obj}{scHolography object list}
+
+\item{cells}{Which cells are used for plotting. Default is NULL (all single cells from scHolography.obj will be plotted)}
+
+\item{feature}{Which feature is used for plotting. Default is NULL, where dots will be colored by annotation. When a feature from expression or metadata (e.g., a gene name) is given, dots will be colored by the intensity of the feature.}
+
+\item{cutoff}{Cutoff for learning variance of prediction. Only cells with learning variance no greater than the cutoff will be plotted. Default is NULL (all cells will be plotted)}
+
+\item{color.by}{Which annotation to use for coloring the dot plot. Default is orig.cluster}
+
+\item{dot.size}{Dot size. Default is 5}
+
+\item{color}{A vector of user defined color to use for coloring. Default is NA (pre-fix color palette will be used)}
+
+\item{palette}{Color palette to use for coloring. Default is Paired}
+
+\item{highlight}{Index of cells to highlight on the plot. Default is NULL (No cells will be highlighted)}
+
+\item{assayToUse}{Which assay to get feature from. Default is SCT}
+
+\item{feature.pal}{Color palette to use for feature plot coloring. Default is viridis. Other options are "rdbu", "magma", and "rdbu_1"}
+
+\item{show.grid}{If to show the grid. Default is False}
+
+\item{g.width}{Width of the grid. Default is 5}
+
+\item{dim}{Number of space dimensions to visualize the reconstructed SMN graph}
 }
 \description{
 scHolography 3D Tissue Reconstruction Visualization

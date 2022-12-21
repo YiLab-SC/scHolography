@@ -4,8 +4,22 @@
 #' @import RColorBrewer
 #' @import plotly
 #' @import Seurat
+#' @param  scHolography.obj scHolography object list
+#' @param  cells Which cells are used for plotting. Default is NULL (all single cells from scHolography.obj will be plotted)
+#' @param  feature Which feature is used for plotting. Default is NULL, where dots will be colored by annotation. When a feature from expression or metadata (e.g., a gene name) is given, dots will be colored by the intensity of the feature.
+#' @param  cutoff Cutoff for learning variance of prediction. Only cells with learning variance no greater than the cutoff will be plotted. Default is NULL (all cells will be plotted)
+#' @param  color.by Which annotation to use for coloring the dot plot. Default is orig.cluster
+#' @param  dot.size Dot size. Default is 5
+#' @param  color A vector of user defined color to use for coloring. Default is NA (pre-fix color palette will be used)
+#' @param  palette Color palette to use for coloring. Default is Paired
+#' @param  highlight Index of cells to highlight on the plot. Default is NULL (No cells will be highlighted)
+#' @param  assayToUse Which assay to get feature from. Default is SCT
+#' @param  feature.pal Color palette to use for feature plot coloring. Default is viridis. Other options are "rdbu", "magma", and "rdbu_1"
+#' @param  show.grid If to show the grid. Default is False
+#' @param  g.width Width of the grid. Default is 5
+#' @param  dim Number of space dimensions to visualize the reconstructed SMN graph
 
-scHolographyPlot<-function(scHolography.obj, dim=3, cells=NULL,feature=NULL,cutoff=NULL, color.by="orig.cluster", dot.size = 5 , color=NA,palette="Paired", highlight=NULL,assayToUse="SCT",feature.pal="viridis",show.grid=F,g.width=5){
+scHolographyPlot<-function(scHolography.obj, cells=NULL,feature=NULL,cutoff=NULL, color.by="orig.cluster", dot.size = 5 , color=NA,palette="Paired", highlight=NULL,assayToUse="SCT",feature.pal="viridis",show.grid=F,g.width=5, dim=3){
   scHolography.sc<-scHolography.obj$scHolography.sc
   if(is.null(levels(scHolography.sc[[color.by]][[1]]))){
     scHolography.sc[[color.by]][[1]]<-as.factor(scHolography.sc[[color.by]][[1]])
@@ -103,6 +117,13 @@ scHolographyPlot<-function(scHolography.obj, dim=3, cells=NULL,feature=NULL,cuto
 #' @import RColorBrewer
 #' @import ggplot2
 #' @import stringr
+#' @param  scHolography.obj scHolography object list
+#' @param  annotationToUse Which annotation to call identities from. Default is orig.cluster
+#' @param  query.cluster A vector of query identity types
+#' @param  pal Color palette to use for coloring. Default is Paired
+#' @param  color A vector of user defined color to use for coloring. Default is NA (pre-fix color palette will be used)
+#' @param  row.group.level Level order of annotation to plot. Default is NULL (alphabetical order will be adopted)
+
 scHolographyNeighborCompPlot<-function(scHolography.obj,annotationToUse, query.cluster=NULL, pal="Paired",color=NULL,row.group.level =NULL){
   clus <- scHolography.obj$scHolography.sc[[annotationToUse]][[1]]
   if(is.null(query.cluster)){

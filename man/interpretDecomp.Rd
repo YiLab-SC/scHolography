@@ -2,10 +2,17 @@
 % Please edit documentation in R/scHolography.R
 \name{interpretDecomp}
 \alias{interpretDecomp}
-\title{Decomposition Analysis}
+\title{Stable Matching Neighbor Analysis}
 \usage{
 interpretDecomp(est.array, nslot, is3D = T)
 }
+\arguments{
+\item{est.array}{Distance matrix between individual cells/pixels}
+
+\item{nslot}{Maximum number of neighbors to find for stable matching}
+
+\item{is3D}{If est.array is a 3D tensor. Default is True}
+}
 \description{
-Decomposition Analysis
+Stable Matching Neighbor Analysis
 }

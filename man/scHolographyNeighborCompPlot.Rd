@@ -13,6 +13,19 @@ scHolographyNeighborCompPlot(
   row.group.level = NULL
 )
 }
+\arguments{
+\item{scHolography.obj}{scHolography object list}
+
+\item{annotationToUse}{Which annotation to call identities from. Default is orig.cluster}
+
+\item{query.cluster}{A vector of query identity types}
+
+\item{pal}{Color palette to use for coloring. Default is Paired}
+
+\item{color}{A vector of user defined color to use for coloring. Default is NA (pre-fix color palette will be used)}
+
+\item{row.group.level}{Level order of annotation to plot. Default is NULL (alphabetical order will be adopted)}
+}
 \description{
 Spatial Neighborhood Composition Plot
 }

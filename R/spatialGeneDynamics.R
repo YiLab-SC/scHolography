@@ -233,7 +233,22 @@ DoMultiBarHeatmap <- function (object,
 #' @import igraph
 #' @import viridis
 #' @import colorspace
-
+#' @param  scHolography.obj scHolography object list
+#' @param  query.cluster A vector of query identity types
+#' @param  ref.cluster A vector of reference identity types
+#' @param  plotByDist Whether order the heatmap by the SMN distance. Default is False
+#' @param  geneOI Gene of interest to plot for heatmaps
+#' @param  annotationToUse Which annotation to call identities from. Default is orig.cluster
+#' @param  assayToUse Which assay to get feature from. Default is SCT
+#' @param  quant.left Quantile cutoff for the left side. Default is 0.1
+#' @param  quant.right Quantile cutoff for the right side. Default is 0.9
+#' @param  nCperL Manually define number of cell per layer for analysis. Default is NULL
+#' @param  nL Manually define number of cell layers for analysis. Default is NULL
+#' @param  heatmapGp Which annotation to use for heatmap column grouping. Default is NULL
+#' @param  pal Color palette to use for coloring. Default is Paired
+#' @param  n.neighbor Number of nearest cells to use to define distance. Default is 30
+#' @param  extreme.comp Whether to consider only the two extreme (proximal and distal) ends for analysis. Default is False
+#' @param  heatmap.pal Color palette to use for heatmap feature coloring. Default is viridis. Other options are "rdbu", "magma", and "rdbu_1"
 relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster,plotByDist=F,geneOI=NULL,
                                     annotationToUse="orig.cluster",assayToUse="SCT", quant.left=0.1, quant.right=0.9,
                                     nCperL=NULL,nL=NULL,heatmapGp=NULL,pal="Paired",n.neighbor=30,extreme.comp=F,heatmap.pal="viridis"){
@@ -405,6 +420,12 @@ relativeSpatialAnalysis <- function(scHolography.obj, query.cluster, ref.cluster
 #' @import colorspace
 #' @import stringr
 #' @export
+#' @param  scHolography.obj scHolography object list
+#' @param  query.cluster A vector of query identity types
+#' @param  ref.cluster A vector of reference identity types
+#' @param  annotationToUse Which annotation to call identities from. Default is orig.cluster
+#' @param  assayToUse Which assay to get feature from. Default is SCT
+#' @param  n.neighbor Number of nearest cells to use to define distance. Default is 30
 findGeneSpatialDynamics  <- function (scHolography.obj, query.cluster, ref.cluster, annotationToUse = "orig.cluster",
                                       assayToUse = "SCT", n.neighbor = 30)
 {
@@ -480,6 +501,14 @@ findGeneSpatialDynamics  <- function (scHolography.obj, query.cluster, ref.clust
 #' @import colorspace
 #' @import stringr
 #' @export
+#' @param  scHolography.obj scHolography object list
+#' @param  query.cluster A vector of query identity types
+#' @param  ref.cluster A vector of reference identity types
+#' @param  geneOI Gene of interest to plot for heatmaps
+#' @param  annotationToUse Which annotation to call identities from. Default is orig.cluster
+#' @param  assayToUse Which assay to get feature from. Default is SCT
+#' @param  pal Color palette to use for coloring. Default is Paired
+#' @param  n.neighbor Number of nearest cells to use to define distance. Default is 30
 expressionByDistPlot <- function(scHolography.obj, query.cluster, ref.cluster, geneOI,annotationToUse = "orig.cluster", assayToUse = "SCT",
                                  pal = "Paired", n.neighbor = 30){
   scHolography.sc <- scHolography.obj$scHolography.sc
@@ -544,7 +573,16 @@ expressionByDistPlot <- function(scHolography.obj, query.cluster, ref.cluster, g
 #' @import colorspace
 #' @import stringr
 #' @export
-
+#' @param  scHolography.obj scHolography object list
+#' @param  query.cluster A vector of query identity types
+#' @param  ref.cluster A vector of reference identity types
+#' @param  geneOI Gene of interest to plot for heatmaps
+#' @param  annotationToUse Which annotation to call identities from. Default is orig.cluster
+#' @param  assayToUse Which assay to get feature from. Default is SCT
+#' @param  heatmapGp Which annotation to use for heatmap column grouping. Default is NULL
+#' @param  pal Color palette to use for coloring. Default is Paired
+#' @param  n.neighbor Number of nearest cells to use to define distance. Default is 30
+#' @param  heatmap.pal Color palette to use for heatmap feature coloring. Default is viridis. Other options are "rdbu", "magma", and "rdbu_1"
 spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.cluster,
                                       geneOI = NULL, annotationToUse = "orig.cluster", assayToUse = "RNA",
                                       heatmapGp = NULL, pal = "Paired", n.neighbor = 30,
@@ -664,7 +702,12 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
 #' @import RColorBrewer
 #' @import stringr
 #' @export
-
+#' @param  scHolography.obj scHolography object list
+#' @param  annotationToUse Which annotation to call identities from. Default is orig.cluster
+#' @param  query.cluster A vector of query identity types
+#' @param  nclus Number of spatial neighborhood to cluster. Default is NULL (the number will be decided by silhouette coefficients)
+#' @param  pal Color palette to use for coloring. Default is Set3
+#'
 findSpatialNeighborhood <-function(scHolography.obj,annotationToUse,query.cluster,nclus=NULL, pal="Set3"){
 
   docs <- lapply(which(scHolography.obj$scHolography.sc[[annotationToUse]][[1]]%in%query.cluster),function(x){as.vector(scHolography.obj$scHolography.sc[[annotationToUse]][[1]][which(scHolography.obj$adj.mtx[x,]>0)])})

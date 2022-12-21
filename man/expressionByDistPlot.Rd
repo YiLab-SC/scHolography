@@ -15,6 +15,23 @@ expressionByDistPlot(
   n.neighbor = 30
 )
 }
+\arguments{
+\item{scHolography.obj}{scHolography object list}
+
+\item{query.cluster}{A vector of query identity types}
+
+\item{ref.cluster}{A vector of reference identity types}
+
+\item{geneOI}{Gene of interest to plot for heatmaps}
+
+\item{annotationToUse}{Which annotation to call identities from. Default is orig.cluster}
+
+\item{assayToUse}{Which assay to get feature from. Default is SCT}
+
+\item{pal}{Color palette to use for coloring. Default is Paired}
+
+\item{n.neighbor}{Number of nearest cells to use to define distance. Default is 30}
+}
 \description{
 Expression by Distance Plot
 }

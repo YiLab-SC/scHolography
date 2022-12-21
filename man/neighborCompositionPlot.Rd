@@ -11,6 +11,15 @@ neighborCompositionPlot(
   palette = "Paired"
 )
 }
+\arguments{
+\item{scHolography.obj}{scHolography object list}
+
+\item{annotationToUse}{Which annotation to call identities from. Default is orig.cluster}
+
+\item{query.cluster}{A vector of query identity types}
+
+\item{palette}{Color palette to use for coloring. Default is Paired}
+}
 \description{
 Layer Composition Plot from Given Celltypes
 }

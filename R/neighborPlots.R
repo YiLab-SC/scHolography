@@ -2,7 +2,10 @@
 #' @export
 #' @import Seurat
 #' @import RColorBrewer
-
+#' @param  scHolography.obj scHolography object list
+#' @param  annotationToUse Which annotation to call identities from. Default is orig.cluster
+#' @param  query.cluster A vector of query identity types
+#' @param  palette Color palette to use for coloring. Default is Paired
 neighborCompositionPlot<-function(scHolography.obj, annotationToUse="orig.cluster", query.cluster,palette = "Paired"){
   scHolography.sc<-scHolography.obj$scHolography.sc
   adj.mtx <- scHolography.obj$adj.mtx
@@ -49,7 +52,12 @@ neighborCompositionPlot<-function(scHolography.obj, annotationToUse="orig.cluste
 #' @import igraph
 #' @import RColorBrewer
 #' @import plotly
-
+#' @param  scHolography.obj scHolography object list
+#' @param  annotationToUse Which annotation to call identities from. Default is orig.cluster
+#' @param  query.cluster.list A vector of query identity types to be measured SMN distance to reference
+#' @param  reference.cluster A vector of reference identity types
+#' @param  palette Color palette to use for coloring. Default is Paired
+#' @param  n.neighbor Number of nearest cells to use to define distance. Default is 30
 clusterDistanceBoxplot <- function(scHolography.obj,annotationToUse = "orig.cluster",query.cluster.list,
                                    reference.cluster,palette = "Paired", n.neighbor = 30){
   scHolography.sc<-scHolography.obj$scHolography.sc

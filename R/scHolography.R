@@ -23,6 +23,13 @@ seuratSCT<-function(seuratObj,ndims ){
 #' Data Integration
 #' @export
 #' @import Seurat
+#' @param  low.res.sp Seurat Object of ST (low resolution) data
+#' @param  high.res.sp Seurat Object of SC (high resolution) data
+#' @param  stProcessed Is low.res.sp processed? Default is False
+#' @param  scProcessed Is low.res.sp processed? Default is False
+#' @param  nFeatureToUse Number of features to use for downstream analysis (e.g., PCA). Default is 3000
+#' @param  whichReference Use which dataset as the reference for Seurat integration. Default using SC data (whichReference=2). Set whichReference=1 to use ST data as the integration reference
+#' @param  nPCtoUse Number of PCs used for analysis. Default is 32
 #'
 dataAlign<-function(low.res.sp,high.res.sp, stProcessed=F, scProcessed=F, nFeatureToUse=3000, whichReference=2,nPCtoUse=32){
   if(stProcessed==0){low.res.sp<-seuratSCT(low.res.sp,ndims = nPCtoUse)}
@@ -139,9 +146,12 @@ applyModel <- function(x_train, x_test, train_y, nRepeat ,seed,n.PCtoUse,n.PCtoO
 
 
 
-#' Decomposition Analysis
+#' Stable Matching Neighbor Analysis
 #' @import matchingR
 #' @export
+#' @param  est.array Distance matrix between individual cells/pixels
+#' @param  nslot Maximum number of neighbors to find for stable matching
+#' @param  is3D If est.array is a 3D tensor. Default is True
 interpretDecomp<-function(est.array, nslot, is3D=T){
   if(is3D){
     flatten.array <-apply(est.array,c(1),function(x){
@@ -200,7 +210,14 @@ interpretDecomp<-function(est.array, nslot, is3D=T){
 #' Single cell 3D reconstruction
 #' @export
 #' @import igraph
-trainHolography<-function(sp.integrated,vSeed=60611,n.repeat=30,n.slot=30,n.pcUse=32,n.pcOut=32){
+#' @param  sp.integrated Seurat Object of integrated SC and ST data
+#' @param  n.repeat Number of neural network models to train. Default is 30
+#' @param  n.slot Maximum number of neighbors to find for stable matching. Default is 30
+#' @param  n.pcUse Number of PCs used for NN input. Default is 32
+#' @param  n.pcOut Number of PCs used for NN output. Default is 32
+#' @param  vSeed Random seed. Default is 60611
+#'
+trainHolography<-function(sp.integrated,n.repeat=30,n.slot=30,n.pcUse=32,n.pcOut=32,vSeed=60611){
   dat.list<-getData(sp.integrated,nPCtoOut = n.pcOut)
   train_y<-dat.list[[3]]
   test_x<-dat.list[[2]]
@@ -241,6 +258,12 @@ trainHolography<-function(sp.integrated,vSeed=60611,n.repeat=30,n.slot=30,n.pcUs
 #' @import igraph
 #' @import stringr
 #' @import Seurat
+#' @param  scHolography.obj scHolography object list
+#' @param  query.cluster A vector of query identity types
+#' @param  ref.cluster A vector of reference identity types
+#' @param  annotationToUse Which annotation to call identities from. Default is orig.cluster
+#' @param  n.neighbor Number of nearest cells to use to define distance. Default is 30
+
 findDistance<- function (scHolography.obj, query.cluster, ref.cluster, annotationToUse = "orig.cluster",n.neighbor = 30)
 {
   scHolography.sc <- scHolography.obj$scHolography.sc
@@ -287,6 +310,9 @@ findDistance<- function (scHolography.obj, query.cluster, ref.cluster, annotatio
 #' @export
 #' @import igraph
 #' @import Seurat
+#' @param  high.res.sp Seurat Object of SC (high resolution) data
+#' @param  low.res.sp Seurat Object of ST (low resolution) data
+#' @param  dist.mat Estimated spatial distance matrix between cells
 distToscHolography <- function(high.res.sp,low.res.sp,dist.mat){
   dist.mat.ls <-interpretDecomp(dist.mat,is3D = F,nslot = 30)
   adj.mtx <- dist.mat.ls[[1]]

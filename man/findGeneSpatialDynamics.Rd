@@ -13,6 +13,19 @@ findGeneSpatialDynamics(
   n.neighbor = 30
 )
 }
+\arguments{
+\item{scHolography.obj}{scHolography object list}
+
+\item{query.cluster}{A vector of query identity types}
+
+\item{ref.cluster}{A vector of reference identity types}
+
+\item{annotationToUse}{Which annotation to call identities from. Default is orig.cluster}
+
+\item{assayToUse}{Which assay to get feature from. Default is SCT}
+
+\item{n.neighbor}{Number of nearest cells to use to define distance. Default is 30}
+}
 \description{
 Find Gene Spatial Dynamics
 }
