@@ -2,10 +2,11 @@ Package: scHolography
 Type: Package
 Title: Reconstruction of 3-dimensional Tissue Organization at the Single-Cell Resolution
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Authors@R: c(
+    person("Yuheng", 'Fu', email='yuheng.fu@northwestern.edu', role=c('aut', 'cre')),
+    person("Rosemary", 'Braun', email='rbraun@northwestern.edu', role=c('aut', 'ths')),
+    person("Rui", 'Yi', email='yir@northwestern.edu', role=c('aut', 'ths')) )
+Description: scHolography is a deep learning workflow to reconstruct tissue 3D structures from scRNA-seq data based on spatial transcriptomic (ST) references. From scHolography prediction, users can identify spatial expression dynamics and dissect the heterogeneity of spatial neighborhoods within reconstructed tissues. 
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
