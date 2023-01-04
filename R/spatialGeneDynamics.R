@@ -1,4 +1,5 @@
 #' Do MultiBar Heatmap
+#' This function is adapted from https://github.com/elliefewings/DoMultiBarHeatmap
 #' @import Seurat
 #' @import dplyr
 #' @import RColorBrewer
