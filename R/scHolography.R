@@ -248,6 +248,7 @@ trainHolography<-function(sp.integrated,n.repeat=30,n.slot=30,n.pcUse=32,n.pcOut
   sc.in.int[["y3d_sp"]]<-l_3d[,2]
   sc.in.int[["z3d_sp"]]<-l_3d[,3]
   sc.in.int[["motility"]]<-log(var.vec)
+  ###
   list(scHolography.sc=sc.in.int, scHolography.sp=sp.in.int,adj.mtx=adj.mtx,est.array=colMeans(cp_decomp))
 }
 
