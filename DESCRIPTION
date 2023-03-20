@@ -10,7 +10,7 @@ Description: scHolography is a deep learning workflow to reconstruct tissue 3D s
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 Imports: 
     dplyr,
     RColorBrewer,
@@ -31,7 +31,4 @@ Imports:
     plyr,
     MASS,
     colorspace,
-    viridis,
-    d3heatmap,
-    factoextra,
-    textmineR
+    viridis

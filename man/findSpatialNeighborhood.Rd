@@ -6,10 +6,12 @@
 \usage{
 findSpatialNeighborhood(
   scHolography.obj,
-  annotationToUse,
+  annotationToUse = "orig.ident",
   query.cluster,
-  nclus = NULL,
-  pal = "Set3"
+  orig.assay = "RNA",
+  nDims = 10,
+  resolution = 0.2,
+  pal = "Paired"
 )
 }
 \arguments{
@@ -19,9 +21,13 @@ findSpatialNeighborhood(
 
 \item{query.cluster}{A vector of query identity types}
 
-\item{nclus}{Number of spatial neighborhood to cluster. Default is NULL (the number will be decided by silhouette coefficients)}
+\item{orig.assay}{Which assay to get feature from. Default is RNA}
 
-\item{pal}{Color palette to use for coloring. Default is Set3}
+\item{nDims}{The number of PC dimensions used to find spatial neighborhood. The default is 10}
+
+\item{resolution}{The resolution used for finding spatial neighborhood. The default is 0.2}
+
+\item{pal}{Color palette to use for scHolographyPlot. Default is Paired}
 }
 \description{
 Find Spatial Neighborhood

@@ -13,6 +13,7 @@ spatialDynamicsFeaturePlot(
   assayToUse = "RNA",
   heatmapGp = NULL,
   pal = "Paired",
+  multi.pal = "RdYlBu",
   n.neighbor = 30,
   heatmap.pal = "viridis"
 )

@@ -4,7 +4,7 @@
 \alias{interpretDecomp}
 \title{Stable Matching Neighbor Analysis}
 \usage{
-interpretDecomp(est.array, nslot, is3D = T)
+interpretDecomp(est.array, nslot, is3D = T, isFilter)
 }
 \arguments{
 \item{est.array}{Distance matrix between individual cells/pixels}

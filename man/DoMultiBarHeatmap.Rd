@@ -2,7 +2,8 @@
 % Please edit documentation in R/spatialGeneDynamics.R
 \name{DoMultiBarHeatmap}
 \alias{DoMultiBarHeatmap}
-\title{Do MultiBar Heatmap}
+\title{Do MultiBar Heatmap
+This function is adapted from https://github.com/elliefewings/DoMultiBarHeatmap}
 \usage{
 DoMultiBarHeatmap(
   object,
@@ -26,10 +27,11 @@ DoMultiBarHeatmap(
   lines.width = NULL,
   group.bar.height = 0.02,
   combine = TRUE,
-  palette = "Paired",
+  palette = c("Paired", "RdYlBu"),
   disPlot = F
 )
 }
 \description{
 Do MultiBar Heatmap
+This function is adapted from https://github.com/elliefewings/DoMultiBarHeatmap
 }
