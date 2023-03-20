@@ -697,7 +697,7 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
 
 #' Find Spatial Neighborhood
 #' @import Seurat
-#' @import igraphy
+#' @import igraph
 #' @import RColorBrewer
 #' @import ggplot2
 #' @import RColorBrewer

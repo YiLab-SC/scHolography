@@ -31,10 +31,10 @@ seuratSCT<-function(seuratObj,ndims ){
 #' @param  whichReference Use which dataset as the reference for Seurat integration. Default using SC data (whichReference=2). Set whichReference=1 to use ST data as the integration reference
 #' @param  nPCtoUse Number of PCs used for analysis. Default is 32
 #'
-dataAlign<-function(low.res.sp,high.res.sp, stProcessed=F, scProcessed=F, nFeatureToUse=3000, whichReference=2,nPCtoUse=32){
+dataAlign<-function(low.res.sp,high.res.sp, stProcessed=F, scProcessed=F, nFeatureToUse=3000, whichReference=2,nPCtoUse=32,future.size=4000){
   if(stProcessed==0){low.res.sp<-seuratSCT(low.res.sp,ndims = nPCtoUse)}
   if(scProcessed==0){high.res.sp<-seuratSCT(high.res.sp,ndims = nPCtoUse)}
-  options(future.globals.maxSize = 4000 * 1024^2)
+  options(future.globals.maxSize = future.size * 1024^2)
   low.res.sp$orig.cluster<-low.res.sp$seurat_clusters
   high.res.sp$orig.cluster<-high.res.sp$seurat_clusters
   low.res.sp[["type.assay"]]<-"sp"
