@@ -124,102 +124,137 @@ scHolographyPlot<-function(scHolography.obj, cells=NULL,feature=NULL,cutoff=NULL
 #' @param  color A vector of user defined color to use for coloring. Default is NA (pre-fix color palette will be used)
 #' @param  row.group.level Level order of annotation to plot. Default is NULL (alphabetical order will be adopted)
 
-scHolographyNeighborCompPlot<-function(scHolography.obj,annotationToUse, query.cluster=NULL, pal="Paired",color=NULL,row.group.level =NULL){
+scHolographyNeighborCompPlot <- function (scHolography.obj, annotationToUse, query.cluster = NULL,
+                                          pal = "Paired", color = NULL, row.group.level = NULL)
+{
   clus <- scHolography.obj$scHolography.sc[[annotationToUse]][[1]]
-  if(is.null(query.cluster)){
-    query.cluster <- stringr::str_sort(unique(clus),numeric = T)
+  if (is.null(query.cluster)) {
+    query.cluster <- stringr::str_sort(unique(clus), numeric = T)
   }
-
-  matrix <- matrix(ncol = length(unique(clus)),nrow = length(query.cluster), 0)
-  colnames(matrix) <-stringr::str_sort(unique(clus),numeric = T)
+  matrix <- matrix(ncol = length(unique(clus)), nrow = length(query.cluster),
+                   0)
+  colnames(matrix) <- stringr::str_sort(unique(clus), numeric = T)
   rownames(matrix) <- query.cluster
-  uni.clus <- stringr::str_sort(unique(clus),numeric = T)
-
+  uni.clus <- stringr::str_sort(unique(clus), numeric = T)
   for (i in query.cluster) {
-    ind <- which(clus==i)
-    tab <- table(clus[which(colSums(scHolography.obj$adj.mtx[ind,])>0)])
-    matrix[i,names(tab)] <- tab
+    ind <- which(clus == i)
+    if(length(ind)>1){
+      tab <- table(clus[which(colSums(scHolography.obj$adj.mtx[ind, ]) > 0)])}else{
+        tab <- table(clus[which((scHolography.obj$adj.mtx[ind, ]) > 0)])
+      }
+    matrix[i, names(tab)] <- tab
   }
   data.fra <- reshape2::melt(matrix/rowSums(matrix))
-  if(is.null(row.group.level)==F){
-    data.fra$Var1 <- factor(data.fra$Var1 ,row.group.level)}
-  getPalette = colorRampPalette(brewer.pal(12,pal ))
-
-  sig.class.ls <- lapply(uni.clus, function(ind.clus){
-
-    query.cluster <- list(c(ind.clus),uni.clus[-which(uni.clus%in%c(ind.clus))])
-    matrix.ls <-vector("list",2)
-
+  if (is.null(row.group.level) == F) {
+    data.fra$Var1 <- factor(data.fra$Var1, row.group.level)
+  }
+  getPalette = colorRampPalette(brewer.pal(12, pal))
+  sig.class.ls <- lapply(query.cluster, function(ind.clus) {
+    query.cluster.ls <- list(c(ind.clus), uni.clus[-which(uni.clus %in%
+                                                         c(ind.clus))])
+    matrix.ls <- vector("list", 2)
     for (i in 1:2) {
-      ind <- which(clus%in%query.cluster[[i]])
-
-      matrix.this<- matrix(unlist(lapply(uni.clus, function(x){
-        this.clus <- which(clus==x)
-        rowSums(scHolography.obj$adj.mtx[,this.clus])
-      })),ncol=length(uni.clus),byrow=F)
+      ind <- which(clus %in% query.cluster.ls[[i]])
+      matrix.this <- matrix(unlist(lapply(uni.clus, function(x) {
+        this.clus <- which(clus == x)
+        if(length(this.clus)>1){
+          rowSums(scHolography.obj$adj.mtx[, this.clus])
+        }else{
+          scHolography.obj$adj.mtx[, this.clus]
+        }
+      })), ncol = length(uni.clus), byrow = F)
       colnames(matrix.this) <- uni.clus
-      matrix.ls[[i]] <- matrix.this[ind,]
-
+      matrix.ls[[i]] <- matrix.this[ind, ]
     }
+    pval.ls <- lapply(uni.clus, function(x) {
+      if(is.null(dim(matrix.ls[[1]]))){
+        m1 <- matrix.ls[[1]][x]
 
-    pval.ls <- lapply(uni.clus,function(x){
-      wilcox.test(matrix.ls[[1]][,x],matrix.ls[[2]][,x],alternative="greater")$p.value
+      }else{
+        m1 <- matrix.ls[[1]][, x]
+      }
+      if(is.null(dim(matrix.ls[[2]]))){
+        m2 <- matrix.ls[[2]][x]
+
+      }else{
+        m2 <- matrix.ls[[2]][, x]
+      }
+
+      wilcox.test(m1, m2, alternative = "greater")$p.value
     })
     names(pval.ls) <- uni.clus
-    unlist(pval.ls)[names(which(unlist(pval.ls)>=.05))]
+    unlist(pval.ls)[names(which(unlist(pval.ls) >= 0.05))]
   })
-
-  names(sig.class.ls) <- uni.clus
-
+  names(sig.class.ls) <- query.cluster
   norm.mat <- matrix/rowSums(matrix)
-  for(i in uni.clus){
-    norm.mat[i,names(sig.class.ls[[i]])] <- 0
+  norm.mat.og <-norm.mat
+  for (i in rownames(norm.mat)) {
+    norm.mat[i, names(sig.class.ls[[i]])] <- 0
   }
-
   data.fra.sig <- reshape2::melt(norm.mat)
-
   col.use <- getPalette(length(uni.clus))
-
-  if(is.null(color)==F){
+  if (is.null(color) == F) {
     col.use <- color
   }
-
-  if(is.null(row.group.level)==F){
-    data.fra.sig$Var1 <- factor(data.fra.sig$Var1 ,row.group.level)}
-  neighbor.comp <- ggplot(data.fra, aes(x=Var1, y=value,fill=Var2))+ geom_bar( position="stack", stat="identity")+theme_classic()+
-    theme(axis.text.x = element_text(angle=45, hjust=1))+scale_fill_manual(values = col.use)+labs(fill = "",x ="", y = "Composition")
-
-  neighbor.comp.sig <- ggplot(data.fra.sig, aes(x=Var1, y=value,fill=Var2))+ geom_bar( position="stack", stat="identity")+theme_classic()+
-    theme(axis.text.x = element_text(angle=45, hjust=1))+scale_fill_manual(values = col.use)+labs(fill = "",x ="", y = "Composition")
-
-
-  sig.class.ls <- lapply(uni.clus, function(ind.clus){
-
-    query.cluster <- list(c(ind.clus),uni.clus[-which(uni.clus%in%c(ind.clus))])
-    matrix.ls <-vector("list",2)
-
+  if (is.null(row.group.level) == F) {
+    data.fra.sig$Var1 <- factor(data.fra.sig$Var1, row.group.level)
+  }
+  neighbor.comp <- ggplot(data.fra, aes(x = Var1, y = value,
+                                        fill = Var2)) + geom_bar(position = "stack", stat = "identity") +
+    theme_classic() + theme(axis.text.x = element_text(angle = 45,
+                                                       hjust = 1)) + scale_fill_manual(values = col.use) + labs(fill = "",
+                                                                                                                x = "", y = "Composition")
+  neighbor.comp.sig <- ggplot(data.fra.sig, aes(x = Var1, y = value,
+                                                fill = Var2)) + geom_bar(position = "stack", stat = "identity") +
+    theme_classic() + theme(axis.text.x = element_text(angle = 45,
+                                                       hjust = 1)) + scale_fill_manual(values = col.use) + labs(fill = "",
+                                                                                                                x = "", y = "Composition")
+  sig.class.ls <- lapply(query.cluster, function(ind.clus) {
+    query.cluster.ls <- list(c(ind.clus), uni.clus[-which(uni.clus %in%
+                                                            c(ind.clus))])
+    matrix.ls <- vector("list", 2)
     for (i in 1:2) {
-      ind <- which(clus%in%query.cluster[[i]])
-
-      matrix.this<- matrix(unlist(lapply(uni.clus, function(x){
-        this.clus <- which(clus==x)
-        rowSums(scHolography.obj$adj.mtx[,this.clus])
-      })),ncol=length(uni.clus),byrow=F)
+      ind <- which(clus %in% query.cluster.ls[[i]])
+      matrix.this <- matrix(unlist(lapply(uni.clus, function(x) {
+        this.clus <- which(clus == x)
+        if(length(this.clus)>1){
+          rowSums(scHolography.obj$adj.mtx[, this.clus])
+        }else{
+          scHolography.obj$adj.mtx[, this.clus]
+        }
+      })), ncol = length(uni.clus), byrow = F)
       colnames(matrix.this) <- uni.clus
-      matrix.ls[[i]] <- matrix.this[ind,]
-
+      matrix.ls[[i]] <- matrix.this[ind, ]
     }
+    pval.ls <- lapply(uni.clus, function(x) {
+      if(is.null(dim(matrix.ls[[1]]))){
+        m1 <- matrix.ls[[1]][x]
 
-    pval.ls <- lapply(uni.clus,function(x){
-      wilcox.test(matrix.ls[[1]][,x],matrix.ls[[2]][,x],alternative="greater")$p.value
+      }else{
+        m1 <- matrix.ls[[1]][, x]
+      }
+      if(is.null(dim(matrix.ls[[2]]))){
+        m2 <- matrix.ls[[2]][x]
+
+      }else{
+        m2 <- matrix.ls[[2]][, x]
+      }
+
+      wilcox.test(m1, m2, alternative = "greater")$p.value
     })
     names(pval.ls) <- uni.clus
-    unlist(pval.ls)[names(which(unlist(pval.ls)<.05))]
+    unlist(pval.ls)[names(which(unlist(pval.ls) < 0.05))]
   })
+  names(sig.class.ls) <- query.cluster
 
-  names(sig.class.ls) <- uni.clus
-  list(neighbor.comp = neighbor.comp, neighbor.comp.sig=neighbor.comp.sig, significance=sig.class.ls)
 
+  neighbor.comp.sig.ls <- lapply(1:nrow(norm.mat),function(r){
+    sort(norm.mat[r,which(norm.mat[r,]>0)],decreasing = T)
+  })
+  names(neighbor.comp.sig.ls) <- rownames(norm.mat)
+
+  list(neighbor.comp.plot = neighbor.comp, neighbor.comp.sig.plot = neighbor.comp.sig,
+       significance = sig.class.ls, neighbor.comp.sig=neighbor.comp.sig.ls,neighbor.comp=norm.mat.og)
 }
 
 
