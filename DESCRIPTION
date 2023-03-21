@@ -32,4 +32,5 @@ Imports:
     MASS,
     colorspace,
     viridis,
-    SeuratObject
+    SeuratObject,
+    gmodels
