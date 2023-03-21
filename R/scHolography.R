@@ -62,6 +62,7 @@ dataAlign<-function(low.res.sp,high.res.sp, stProcessed=F, scProcessed=F, nFeatu
 #' Generate Data for Processing
 #' @import SeuratObject
 #' @import Seurat
+#' @import gmodels
 #'
 getData <- function (sp.integrated, nPCtoOut, is.fov = F, fov)
 {
