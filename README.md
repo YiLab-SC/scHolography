@@ -35,7 +35,6 @@ tf.Tensor(b'Hello Tensorflow!', shape=(), dtype=string)
 
 ```r
 install.packages("devtools")
-devtools::install_github("talgalili/d3heatmap")            # d3heatmap is a dependent package for scHolography
 devtools::install_github("YiLab-SC/scHolography")
 ```
 Load scHolography for use:
