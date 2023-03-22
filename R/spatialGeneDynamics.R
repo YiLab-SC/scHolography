@@ -700,7 +700,6 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
 #' @import igraph
 #' @import RColorBrewer
 #' @import ggplot2
-#' @import RColorBrewer
 #' @export
 #' @param  scHolography.obj scHolography object list
 #' @param  annotationToUse Which annotation to call identities from. Default is orig.cluster
@@ -720,7 +719,7 @@ findSpatialNeighborhood <- function(scHolography.obj, annotationToUse="orig.iden
   })
 
   colnames(bulk.count) <- colnames(scHolography.obj$scHolography.sc)
-
+  bulk.count<- as(bulk.count, "sparseMatrix")
   ind <- which(scHolography.obj$scHolography.sc[[annotationToUse]][[1]] %in%query.cluster)
   bulk.count.sub <- bulk.count[,ind]
   bulk.count.obj <- Seurat::CreateSeuratObject(bulk.count.sub, verbose = FALSE)
