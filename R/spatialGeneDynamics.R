@@ -760,6 +760,6 @@ findSpatialNeighborhood <- function(scHolography.obj, annotationToUse="orig.iden
   #table(sc.spatial.neighborhood$celltype,sc.spatial.neighborhood$spatial.neighborhood)
   bulk.count.obj <- Seurat::PrepSCTFindMarkers(bulk.count.obj)
   mark <- Seurat::FindAllMarkers(bulk.count.obj,only.pos = T)
-  list(scHolography.obj=updated.obj,query.only.obj=scHolography.obj.sub, sc.marker=mark.sc,neighbor.marker=mark)
+  list(scHolography.obj=updated.obj,query.only.obj=scHolography.obj.sub,bulk.count.obj=bulk.count.obj, sc.marker=mark.sc,neighbor.marker=mark)
 }
 
