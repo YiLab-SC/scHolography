@@ -763,3 +763,84 @@ findSpatialNeighborhood <- function(scHolography.obj, annotationToUse="orig.iden
   list(scHolography.obj=updated.obj,query.only.obj=scHolography.obj.sub,bulk.count.obj=bulk.count.obj, sc.marker=mark.sc,neighbor.marker=mark)
 }
 
+
+
+#' Find Spatial Neighborhood
+#' @import Seurat
+#' @import igraph
+#' @import RColorBrewer
+#' @import ggplot2
+#' @import purrr
+#' @import cluster
+#' @export
+#' @param  scHolography.obj scHolography object list
+#' @param  annotationToUse Which annotation to call identities from. Default is orig.cluster
+#' @param  query.cluster A vector of query identity types
+#' @param  orig.assay Which assay to get feature from. Default is RNA
+#' @param  nDims The number of PC dimensions used to find spatial neighborhood. The default is 10
+#' @param  resolution The resolution used for finding spatial neighborhood. The default is 0.2
+#' @param  nNeighborhood The number of of neighborhood to do k.mean clustering
+#' @param  pal Color palette to use for scHolographyPlot. Default is Paired
+#'
+findSpatialNeighborhood_new<- function (scHolography.obj, annotationToUse = "orig.ident", query.cluster,
+                                    orig.assay = "RNA", nDims = 10, resolution = 0.2, pal = "Paired",nNeighborhood=NULL,seed=60611)
+{
+  graph <- igraph::graph_from_adjacency_matrix(scHolography.obj$adj.mtx,
+                                               mode = "undirected")
+  dist <- igraph::distances(graph, mode = "out")
+  bulk.count <- apply(dist, 1, function(x) {
+    neighbor <- which(x == 1)
+    rowSums(scHolography.obj$scHolography.sc@assays[[orig.assay]]@counts[,
+                                                                         neighbor])
+  })
+  colnames(bulk.count) <- colnames(scHolography.obj$scHolography.sc)
+  bulk.count <- as(bulk.count, "sparseMatrix")
+  ind <- which(scHolography.obj$scHolography.sc[[annotationToUse]][[1]] %in%
+                 query.cluster)
+  bulk.count.sub <- bulk.count[, ind]
+  bulk.count.obj <- Seurat::CreateSeuratObject(bulk.count.sub,
+                                               verbose = FALSE)
+  bulk.count.obj <- Seurat::SCTransform(bulk.count.obj, verbose = FALSE)
+  bulk.count.obj <- Seurat::RunPCA(bulk.count.obj, verbose = FALSE)
+  bulk.count.obj <- Seurat::FindNeighbors(bulk.count.obj, dims = 1:nDims,
+                                          verbose = FALSE)
+  bulk.count.obj <- Seurat::FindClusters(bulk.count.obj, verbose = FALSE,
+                                         resolution = resolution)
+  set.seed(seed)
+  if(is.null(nNeighborhood)==F){
+    sil_width <- purrr::map_dbl(2:10,  function(k){
+      model <- cluster::pam(x = scHolography.obj$scHolography.sc@meta.data[ind,c("x3d_sp","y3d_sp","z3d_sp") ] , k = k)
+      model$silinfo$avg.width
+    })
+    show((2:10)[which.max(sil_width)])
+    bulk.count.obj$kmean.cluster <-factor( kmeans(x = bulk.count.obj@reductions[["pca"]]@cell.embeddings,
+                                                  centers = nNeighborhood, nstart = 100)$cluster)
+    bulk.count.obj <- SetIdent(bulk.count.obj,value="kmean.cluster")
+  }
+
+
+  bulk.count.obj <- Seurat::RunUMAP(bulk.count.obj, dims = 1:nDims,
+                                    verbose = FALSE)
+  scHolography.obj.sub <- scHolography.obj
+  scHolography.obj.sub$scHolography.sc <- subset(scHolography.obj.sub$scHolography.sc,
+                                                 cells = ind)
+  scHolography.obj.sub$scHolography.sc[["spatial.neighborhood"]] <- bulk.count.obj@active.ident
+  updated.obj <- scHolography.obj
+  updated.obj$scHolography.sc[["spatial.neighborhood"]] <- as.character(updated.obj$scHolography.sc[[annotationToUse]][[1]])
+  updated.obj$scHolography.sc$spatial.neighborhood[ind] <- as.character(scHolography.obj.sub$scHolography.sc$spatial.neighborhood)
+  show(scHolographyPlot(updated.obj, color.by = "spatial.neighborhood",
+                        palette = pal))
+  sc.spatial.neighborhood <- scHolography.obj.sub$scHolography.sc
+  Seurat::DefaultAssay(sc.spatial.neighborhood) <- orig.assay
+  sc.spatial.neighborhood <- Seurat::FindVariableFeatures(sc.spatial.neighborhood)
+  sc.spatial.neighborhood <- Seurat::ScaleData(sc.spatial.neighborhood)
+  sc.spatial.neighborhood <- Seurat::SetIdent(sc.spatial.neighborhood,
+                                              value = "spatial.neighborhood")
+  mark.sc <- Seurat::FindAllMarkers(sc.spatial.neighborhood,
+                                    only.pos = T)
+  bulk.count.obj <- Seurat::PrepSCTFindMarkers(bulk.count.obj)
+  mark <- Seurat::FindAllMarkers(bulk.count.obj, only.pos = T)
+  list(scHolography.obj = updated.obj, query.only.obj = scHolography.obj.sub,
+       bulk.count.obj = bulk.count.obj, sc.marker = mark.sc,
+       neighbor.marker = mark)
+}

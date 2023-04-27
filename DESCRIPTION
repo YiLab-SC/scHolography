@@ -33,4 +33,6 @@ Imports:
     colorspace,
     viridis,
     SeuratObject,
-    gmodels
+    gmodels,
+    cluster,
+    purrr
