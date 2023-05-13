@@ -28,6 +28,7 @@ DoMultiBarHeatmap(
   group.bar.height = 0.02,
   combine = TRUE,
   palette = c("Paired", "RdYlBu"),
+  self.color = NULL,
   disPlot = F
 )
 }

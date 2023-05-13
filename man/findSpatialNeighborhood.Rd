@@ -10,8 +10,10 @@ findSpatialNeighborhood(
   query.cluster,
   orig.assay = "RNA",
   nDims = 10,
-  resolution = 0.2,
-  pal = "Paired"
+  resolution = NULL,
+  pal = "Paired",
+  nNeighborhood = NULL,
+  seed = 60611
 )
 }
 \arguments{

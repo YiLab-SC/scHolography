@@ -15,7 +15,8 @@ spatialDynamicsFeaturePlot(
   pal = "Paired",
   multi.pal = "RdYlBu",
   n.neighbor = 30,
-  heatmap.pal = "viridis"
+  heatmap.pal = "viridis",
+  self.color = NULL
 )
 }
 \arguments{
@@ -38,6 +39,8 @@ spatialDynamicsFeaturePlot(
 \item{n.neighbor}{Number of nearest cells to use to define distance. Default is 30}
 
 \item{heatmap.pal}{Color palette to use for heatmap feature coloring. Default is viridis. Other options are "rdbu", "magma", and "rdbu_1"}
+
+\item{self.color}{A vector of user-defined color for each group}
 }
 \description{
 Spatial Dynamics Heatmap

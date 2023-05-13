@@ -6,32 +6,14 @@
 #' @import rlang
 #' @import ggplot2
 #' @import grid
-DoMultiBarHeatmap <- function (object,
-                               features = NULL,
-                               cells = NULL,
-                               group.by = "ident",
-                               additional.group.by = NULL,
-                               additional.group.sort.by = NULL,
-                               cols.use = NULL,
-                               group.bar = TRUE,
-                               disp.min = -2.5,
-                               disp.max = NULL,
-                               slot = "scale.data",
-                               assay = NULL,
-                               label = TRUE,
-                               size = 5.5,
-                               hjust = 0,
-                               angle = 45,
-                               raster = TRUE,
-                               draw.lines = TRUE,
-                               lines.width = NULL,
-                               group.bar.height = 0.02,
-                               combine = TRUE,
-                               palette=c("Paired","RdYlBu"),
-                               disPlot=F
-)
+DoMultiBarHeatmap <- function (object, features = NULL, cells = NULL, group.by = "ident",
+                               additional.group.by = NULL, additional.group.sort.by = NULL,
+                               cols.use = NULL, group.bar = TRUE, disp.min = -2.5, disp.max = NULL,
+                               slot = "scale.data", assay = NULL, label = TRUE, size = 5.5,
+                               hjust = 0, angle = 45, raster = TRUE, draw.lines = TRUE,
+                               lines.width = NULL, group.bar.height = 0.02, combine = TRUE,
+                               palette = c("Paired", "RdYlBu"),self.color=NULL, disPlot = F)
 {
-
   cells <- cells %||% colnames(x = object)
   if (is.numeric(x = cells)) {
     cells <- colnames(x = object)[cells]
@@ -39,7 +21,6 @@ DoMultiBarHeatmap <- function (object,
   assay <- assay %||% Seurat::DefaultAssay(object = object)
   Seurat::DefaultAssay(object = object) <- assay
   features <- features %||% Seurat::VariableFeatures(object = object)
-  ## Why reverse???
   features <- rev(x = unique(x = features))
   disp.max <- disp.max %||% ifelse(test = slot == "scale.data",
                                    yes = 2.5, no = 6)
@@ -56,49 +37,50 @@ DoMultiBarHeatmap <- function (object,
             slot, " slot for the ", assay, " assay: ", paste(bad.features,
                                                              collapse = ", "))
   }
-
   if (!is.null(additional.group.sort.by)) {
     if (any(!additional.group.sort.by %in% additional.group.by)) {
-      bad.sorts <- additional.group.sort.by[!additional.group.sort.by %in% additional.group.by]
-      additional.group.sort.by <- additional.group.sort.by[additional.group.sort.by %in% additional.group.by]
+      bad.sorts <- additional.group.sort.by[!additional.group.sort.by %in%
+                                              additional.group.by]
+      additional.group.sort.by <- additional.group.sort.by[additional.group.sort.by %in%
+                                                             additional.group.by]
       if (length(x = bad.sorts) > 0) {
         warning("The following additional sorts were omitted as they were not a subset of additional.group.by : ",
                 paste(bad.sorts, collapse = ", "))
       }
     }
   }
-
   data <- as.data.frame(x = as.matrix(x = t(x = Seurat::GetAssayData(object = object,
                                                                      slot = slot)[features, cells, drop = FALSE])))
-
   object <- suppressMessages(expr = Seurat::StashIdent(object = object,
                                                        save.name = "ident"))
   group.by <- group.by %||% "ident"
-  groups.use <- object[[c(group.by, additional.group.by[!additional.group.by %in% group.by])]][cells, , drop = FALSE]
+  groups.use <- object[[c(group.by, additional.group.by[!additional.group.by %in%
+                                                          group.by])]][cells, , drop = FALSE]
   plots <- list()
-
   for (i in group.by) {
     data.group <- data
     if (!is.null(additional.group.by)) {
-      additional.group.use <- additional.group.by[additional.group.by!=i]
-      if (!is.null(additional.group.sort.by)){
-        additional.sort.use = additional.group.sort.by[additional.group.sort.by != i]
-      } else {
+      additional.group.use <- additional.group.by[additional.group.by !=
+                                                    i]
+      if (!is.null(additional.group.sort.by)) {
+        additional.sort.use = additional.group.sort.by[additional.group.sort.by !=
+                                                         i]
+      }
+      else {
         additional.sort.use = NULL
       }
-    } else {
+    }
+    else {
       additional.group.use = NULL
       additional.sort.use = NULL
     }
-
-    group.use <- groups.use[, c(i, additional.group.use), drop = FALSE]
-
-    for(colname in colnames(group.use)){
+    group.use <- groups.use[, c(i, additional.group.use),
+                            drop = FALSE]
+    for (colname in colnames(group.use)) {
       if (!is.factor(x = group.use[[colname]])) {
         group.use[[colname]] <- factor(x = group.use[[colname]])
       }
     }
-
     if (draw.lines) {
       lines.width <- lines.width %||% ceiling(x = nrow(x = data.group) *
                                                 0.0025)
@@ -106,96 +88,108 @@ DoMultiBarHeatmap <- function (object,
                                            lines.width), FUN = function(x) {
                                              return(Seurat:::RandomName(length = 20))
                                            })
-      placeholder.groups <- data.frame(rep(x = levels(x = group.use[[i]]), times = lines.width))
+      placeholder.groups <- data.frame(rep(x = levels(x = group.use[[i]]),
+                                           times = lines.width))
       group.levels <- list()
       group.levels[[i]] = levels(x = group.use[[i]])
       for (j in additional.group.use) {
         group.levels[[j]] <- levels(x = group.use[[j]])
         placeholder.groups[[j]] = NA
       }
-
       colnames(placeholder.groups) <- colnames(group.use)
       rownames(placeholder.groups) <- placeholder.cells
-
       group.use <- sapply(group.use, as.vector)
       rownames(x = group.use) <- cells
-
       group.use <- rbind(group.use, placeholder.groups)
-
       for (j in names(group.levels)) {
-        group.use[[j]] <- factor(x = group.use[[j]], levels = group.levels[[j]])
+        group.use[[j]] <- factor(x = group.use[[j]],
+                                 levels = group.levels[[j]])
       }
-
       na.data.group <- matrix(data = NA, nrow = length(x = placeholder.cells),
                               ncol = ncol(x = data.group), dimnames = list(placeholder.cells,
                                                                            colnames(x = data.group)))
       data.group <- rbind(data.group, na.data.group)
     }
-
-    order_expr <- paste0('order(', paste(c(i, additional.sort.use), collapse=','), ')')
-    group.use = with(group.use, group.use[eval(parse(text=order_expr)), , drop=F])
-
+    order_expr <- paste0("order(", paste(c(i, additional.sort.use),
+                                         collapse = ","), ")")
+    group.use = with(group.use, group.use[eval(parse(text = order_expr)),
+                                          , drop = F])
     plot <- Seurat:::SingleRasterMap(data = data.group, raster = raster,
                                      disp.min = disp.min, disp.max = disp.max, feature.order = features,
                                      cell.order = rownames(x = group.use), group.by = group.use[[i]])
-
     if (group.bar) {
       pbuild <- ggplot2::ggplot_build(plot = plot)
       group.use2 <- group.use
       cols <- list()
       na.group <- Seurat:::RandomName(length = 20)
-      col.ind=0
-      for (colname in rev(x = colnames(group.use2))) {disPlot
+      col.ind = 0
+      for (colname in rev(x = colnames(group.use2))) {
+        disPlot
         if (disPlot) {
           colid = ""
-        }else if(colname == i){
-          colid = paste0('Identity (', colname, ')')
-        } else {
+        }
+        else if (colname == i) {
+          colid = paste0("Identity (", colname, ")")
+        }
+        else {
           colid = colname
         }
+        col.ind = col.ind + 1
+        cols[[colname]] <- colorRampPalette(brewer.pal(12,
+                                                       palette[col.ind]))(length(x = levels(x = group.use[[colname]])))
+        if(is.null(self.color)==F){
+          if(col.ind==1){
+            cols[[colname]] <- self.color
+          }
+        }
 
-        # Default
-        col.ind=col.ind+1
-        cols[[colname]] <- colorRampPalette(brewer.pal(12, palette[col.ind]))(length(x = levels(x = group.use[[colname]])))
-        #Overwrite if better value is provided
         if (!is.null(cols.use[[colname]])) {
           req_length = length(x = levels(group.use))
-          if (length(cols.use[[colname]]) < req_length){
-            warning("Cannot use provided colors for ", colname, " since there aren't enough colors.")
-          } else {
+          if (length(cols.use[[colname]]) < req_length) {
+            warning("Cannot use provided colors for ",
+                    colname, " since there aren't enough colors.")
+          }
+          else {
             if (!is.null(names(cols.use[[colname]]))) {
-              if (all(levels(group.use[[colname]]) %in% names(cols.use[[colname]]))) {
+              if (all(levels(group.use[[colname]]) %in%
+                      names(cols.use[[colname]]))) {
                 cols[[colname]] <- as.vector(cols.use[[colname]][levels(group.use[[colname]])])
-              } else {
-                warning("Cannot use provided colors for ", colname, " since all levels (", paste(levels(group.use[[colname]]), collapse=","), ") are not represented.")
               }
-            } else {
+              else {
+                warning("Cannot use provided colors for ",
+                        colname, " since all levels (", paste(levels(group.use[[colname]]),
+                                                              collapse = ","), ") are not represented.")
+              }
+            }
+            else {
               cols[[colname]] <- as.vector(cols.use[[colname]])[c(1:length(x = levels(x = group.use[[colname]])))]
             }
           }
         }
-
-        # Add white if there's lines
         if (draw.lines) {
-          levels(x = group.use2[[colname]]) <- c(levels(x = group.use2[[colname]]), na.group)
+          levels(x = group.use2[[colname]]) <- c(levels(x = group.use2[[colname]]),
+                                                 na.group)
           group.use2[placeholder.cells, colname] <- na.group
           cols[[colname]] <- c(cols[[colname]], "#FFFFFF")
         }
         names(x = cols[[colname]]) <- levels(x = group.use2[[colname]])
-
         y.range <- diff(x = pbuild$layout$panel_params[[1]]$y.range)
-        y.pos <- max(pbuild$layout$panel_params[[1]]$y.range) + y.range * 0.015
+        y.pos <- max(pbuild$layout$panel_params[[1]]$y.range) +
+          y.range * 0.015
         y.max <- y.pos + group.bar.height * y.range
-        pbuild$layout$panel_params[[1]]$y.range <- c(pbuild$layout$panel_params[[1]]$y.range[1], y.max)
-
-        plot <- suppressMessages(plot +
-                                   ggplot2::annotation_raster(raster = t(x = cols[[colname]][group.use2[[colname]]]),  xmin = -Inf, xmax = Inf, ymin = y.pos, ymax = y.max) +
-                                   ggplot2::annotation_custom(grob = grid::textGrob(label = colid, hjust = 0, gp = grid::gpar(cex = 0.75)), ymin = mean(c(y.pos, y.max)), ymax = mean(c(y.pos, y.max)), xmin = Inf, xmax = Inf) +
-                                   ggplot2::coord_cartesian(ylim = c(0, y.max), clip = "off"))
-
+        pbuild$layout$panel_params[[1]]$y.range <- c(pbuild$layout$panel_params[[1]]$y.range[1],
+                                                     y.max)
+        plot <- suppressMessages(plot + ggplot2::annotation_raster(raster = t(x = cols[[colname]][group.use2[[colname]]]),
+                                                                   xmin = -Inf, xmax = Inf, ymin = y.pos, ymax = y.max) +
+                                   ggplot2::annotation_custom(grob = grid::textGrob(label = colid,
+                                                                                    hjust = 0, gp = grid::gpar(cex = 0.75)),
+                                                              ymin = mean(c(y.pos, y.max)), ymax = mean(c(y.pos,
+                                                                                                          y.max)), xmin = Inf, xmax = Inf) + ggplot2::coord_cartesian(ylim = c(0,
+                                                                                                                                                                               y.max), clip = "off"))
         if ((colname == i) && label) {
           x.max <- max(pbuild$layout$panel_params[[1]]$x.range)
-          x.divs <- pbuild$layout$panel_params[[1]]$x.major %||% pbuild$layout$panel_params[[1]]$x$break_positions()
+          x.divs <- pbuild$layout$panel_params[[1]]$x.major %||%
+            pbuild$layout$panel_params[[1]]$x$break_positions()
           group.use$x <- x.divs
           label.x.pos <- tapply(X = group.use$x, INDEX = group.use[[colname]],
                                 FUN = median) * x.max
@@ -216,7 +210,7 @@ DoMultiBarHeatmap <- function (object,
     plots[[i]] <- plot
   }
   if (combine) {
-    plots <-Seurat::CombinePlots(plots = plots)
+    plots <- Seurat::CombinePlots(plots = plots)
   }
   return(plots)
 }
@@ -587,11 +581,10 @@ expressionByDistPlot <- function(scHolography.obj, query.cluster, ref.cluster, g
 #' @param  pal Color palette to use for coloring. Default is Paired
 #' @param  n.neighbor Number of nearest cells to use to define distance. Default is 30
 #' @param  heatmap.pal Color palette to use for heatmap feature coloring. Default is viridis. Other options are "rdbu", "magma", and "rdbu_1"
-spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.cluster,
-                                      geneOI = NULL, annotationToUse = "orig.cluster", assayToUse = "RNA",
-                                      heatmapGp = NULL, pal = "Paired",multi.pal="RdYlBu", n.neighbor = 30,
-                                      heatmap.pal = "viridis")
-{
+#' @param  self.color A vector of user-defined color for each group
+spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.cluster, geneOI = NULL,
+          annotationToUse = "orig.cluster", assayToUse = "RNA", heatmapGp = NULL,
+          pal = "Paired", multi.pal = "RdYlBu", n.neighbor = 30, heatmap.pal = "viridis",self.color=NULL) {
   scHolography.sc <- scHolography.obj$scHolography.sc
   scHolography.sc[[annotationToUse]][[1]] <- unlist(lapply(as.character(scHolography.sc[[annotationToUse]][[1]]),
                                                            function(x) paste0(strsplit(x, split = " ")[[1]], collapse = "_")))
@@ -600,6 +593,7 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
   scHolography.sc[[annotationToUse]][[1]] <- factor(scHolography.sc[[annotationToUse]][[1]],
                                                     levels = stringr::str_sort(unique(scHolography.sc[[annotationToUse]][[1]]),
                                                                                numeric = T))
+
   query.cluster <- unlist(lapply(as.character(query.cluster),
                                  function(x) paste0(strsplit(x, split = " ")[[1]], collapse = "_")))
   query.cluster <- unlist(lapply(as.character(query.cluster),
@@ -610,16 +604,22 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
                                                                                       split = "/")[[1]], collapse = "_")))
   if (heatmap.pal == "rdbu") {
     heat.col <- rev(RColorBrewer::brewer.pal(n = 25, name = "RdBu"))
-  }else if (heatmap.pal == "magma") {
+  }
+  else if (heatmap.pal == "magma") {
     heat.col <- viridis::viridis(25, option = "A")
-  }else if (heatmap.pal == "rdbu_1") {
+  }
+  else if (heatmap.pal == "rdbu_1") {
     heat.col <- colorspace::diverge_hsv(25)
-  }else {
+  }
+  else {
     heat.col <- viridis::viridis(25)
   }
-  if (sum(is.na(as.numeric(as.character(levels(scHolography.sc[[annotationToUse]][[1]]))))) == 0) {
-    scHolography.sc[[annotationToUse]][[1]] <- factor(paste("c", scHolography.sc[[annotationToUse]][[1]], sep = ""),
-                                                      levels = paste("c", levels(scHolography.sc[[annotationToUse]][[1]]), sep = ""))
+  if (sum(is.na(as.numeric(as.character(levels(scHolography.sc[[annotationToUse]][[1]]))))) ==
+      0) {
+    scHolography.sc[[annotationToUse]][[1]] <- factor(paste("c",
+                                                            scHolography.sc[[annotationToUse]][[1]], sep = ""),
+                                                      levels = paste("c", levels(scHolography.sc[[annotationToUse]][[1]]),
+                                                                     sep = ""))
     query.cluster <- paste("c", query.cluster, sep = "")
     ref.cluster <- paste("c", ref.cluster, sep = "")
   }
@@ -631,15 +631,16 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
                                                mode = "undirected")
   dist <- igraph::distances(graph, mode = "out")
   clus.dist <- dist[query.cluster.ind, ref.cluster.ind]
-  query.to.ref.dis <- (colMeans(apply(clus.dist, 1, sort)[1:n.neighbor, ]))
-
+  query.to.ref.dis <- (colMeans(apply(clus.dist, 1, sort)[1:n.neighbor,
+  ]))
   nL <- length(unique(query.to.ref.dis))
   layer.seq <- rep(NA, length(query.cluster.ind))
   for (i in 1:(nL)) {
-    l.ind <- which(query.to.ref.dis %in% (sort(unique(query.to.ref.dis))[i]) == T)
-    layer.seq[l.ind] <- paste(paste(query.cluster,  collapse = "_"), i, sep = "_")
+    l.ind <- which(query.to.ref.dis %in% (sort(unique(query.to.ref.dis))[i]) ==
+                     T)
+    layer.seq[l.ind] <- paste(paste(query.cluster, collapse = "_"),
+                              i, sep = "_")
   }
-
   query.cluster.sub <- subset(scHolography.sc, cells = c(query.cluster.ind,
                                                          ref.cluster.ind))
   query.cluster.sub$cal.dist <- (c(query.to.ref.dis, rep(NA,
@@ -649,13 +650,13 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
                                                                                          as.character(scHolography.sc[[annotationToUse]][[1]][ref.cluster.ind])),
                                                                                        levels = c(stringr::str_sort(unique(layer.seq), numeric = T),
                                                                                                   ref.cluster))
-  if(length(intersect(query.cluster,ref.cluster))>0){
-    names.ls <-colnames(query.cluster.sub)
-    ind.rg <-((length(layer.seq)+1):ncol(query.cluster.sub))
-    names.ls[ind.rg]<-paste(names.ls[ind.rg],"_ref",sep = "")
-    query.cluster.sub <- Seurat::RenameCells(query.cluster.sub,new.names =names.ls)
+  if (length(intersect(query.cluster, ref.cluster)) > 0) {
+    names.ls <- colnames(query.cluster.sub)
+    ind.rg <- ((length(layer.seq) + 1):ncol(query.cluster.sub))
+    names.ls[ind.rg] <- paste(names.ls[ind.rg], "_ref", sep = "")
+    query.cluster.sub <- Seurat::RenameCells(query.cluster.sub,
+                                             new.names = names.ls)
   }
-
   query.cluster.sub <- Seurat::SetIdent(query.cluster.sub,
                                         value = paste(paste(query.cluster, collapse = "_"), paste(ref.cluster,
                                                                                                   collapse = "_"), sep = "To"), sep = "To")
@@ -665,33 +666,37 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
   else {
     obj.sub <- subset(query.cluster.sub, cells = which((query.cluster.sub@active.ident %in%
                                                           ref.cluster) == F))
-    if(assayToUse=="RNA"){
+    if (assayToUse == "RNA") {
       Seurat::DefaultAssay(obj.sub) <- "RNA"
-      obj.sub <-Seurat::NormalizeData(obj.sub)
+      obj.sub <- Seurat::NormalizeData(obj.sub)
       obj.sub <- Seurat::ScaleData(obj.sub)
-      obj.sub <- Seurat::FindVariableFeatures(obj.sub,nfeatures = 5000)
+      obj.sub <- Seurat::FindVariableFeatures(obj.sub,
+                                              nfeatures = 5000)
     }
-
-    p1 <- DoMultiBarHeatmap(obj.sub, features = geneOI,
-                            assay = assayToUse, draw.lines = F, size = 3, disPlot = T, additional.group.by = annotationToUse,
-                            label = F, palette =  c(pal,multi.pal)) + Seurat::NoLegend() +
+    p1 <- DoMultiBarHeatmap(obj.sub, features = geneOI, assay = assayToUse,
+                            draw.lines = F, size = 3, disPlot = T, additional.group.by = annotationToUse,
+                            label = F, palette = c(pal, multi.pal),self.color = self.color) + Seurat::NoLegend() +
       ggplot2::scale_fill_gradientn(colors = heat.col) +
       ggplot2::theme(legend.title = ggplot2::element_blank())
     fea <- Seurat::VariableFeatures(obj.sub)
     obj.sub[[annotationToUse]][[1]] <- droplevels(obj.sub[[annotationToUse]][[1]])
     labal.col <- colorRampPalette(brewer.pal(12, pal))(length(levels(scHolography.sc[[annotationToUse]][[1]])))
-    p <- Seurat::DoHeatmap(obj.sub, features = fea[1], label=FALSE,
+    if(is.null(self.color)==F){
+      labal.col <- self.color
+    }
+    p <- Seurat::DoHeatmap(obj.sub, features = fea[1], label = FALSE,
                            group.by = annotationToUse, group.colors = labal.col[unlist(lapply(levels(obj.sub[[annotationToUse]][[1]]),
                                                                                               function(x) {
                                                                                                 which(levels(scHolography.sc[[annotationToUse]][[1]]) %in%
                                                                                                         x)
-                                                                                              }))]) + ggplot2::scale_fill_gradientn(colors = colorRampPalette(brewer.pal(12, multi.pal))(100), name = "Distance", labels = c("Proximal", "Distal"), n.breaks = 2)
+                                                                                              }))]) + ggplot2::scale_fill_gradientn(colors = colorRampPalette(brewer.pal(12,
+                                                                                                                                                                         multi.pal))(100), name = "Distance", labels = c("Proximal",
+                                                                                                                                                                                                                         "Distal"), n.breaks = 2)
     grid::grid.newpage()
     legend <- cowplot::get_legend(p)
-    (cowplot::plot_grid(p1, NULL, legend, rel_widths = c(1, -0.1, 1), align = "hv", nrow = 1))
-
+    (cowplot::plot_grid(p1, NULL, legend, rel_widths = c(1,
+                                                         -0.1, 1), align = "hv", nrow = 1))
   }
-
 }
 
 
@@ -709,81 +714,9 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
 #' @param  resolution The resolution used for finding spatial neighborhood. The default is 0.2
 #' @param  pal Color palette to use for scHolographyPlot. Default is Paired
 #'
-findSpatialNeighborhood <- function(scHolography.obj, annotationToUse="orig.ident",query.cluster, orig.assay="RNA",nDims=10,resolution= 0.2,pal="Paired"){
-  graph <- igraph::graph_from_adjacency_matrix(scHolography.obj$adj.mtx,
-                                               mode = "undirected")
-  dist <- igraph::distances(graph, mode = "out")
-  bulk.count <- apply(dist, 1, function(x){
-    neighbor <- which(x==1)
-    rowSums(scHolography.obj$scHolography.sc@assays[[orig.assay]]@counts[,neighbor])
-  })
-
-  colnames(bulk.count) <- colnames(scHolography.obj$scHolography.sc)
-  bulk.count<- as(bulk.count, "sparseMatrix")
-  ind <- which(scHolography.obj$scHolography.sc[[annotationToUse]][[1]] %in%query.cluster)
-  bulk.count.sub <- bulk.count[,ind]
-  bulk.count.obj <- Seurat::CreateSeuratObject(bulk.count.sub, verbose = FALSE)
-  bulk.count.obj <- Seurat::SCTransform(bulk.count.obj, verbose = FALSE)
-  bulk.count.obj <- Seurat::RunPCA(bulk.count.obj, verbose = FALSE)
-  bulk.count.obj <- Seurat::FindNeighbors(bulk.count.obj, dims = 1:nDims, verbose = FALSE)
-  bulk.count.obj <- Seurat::FindClusters(bulk.count.obj, verbose = FALSE,resolution = resolution)
-  bulk.count.obj <- Seurat::RunUMAP(bulk.count.obj, dims=1:nDims,verbose = FALSE)
-
-
-  scHolography.obj.sub <- scHolography.obj
-  scHolography.obj.sub$scHolography.sc <- subset(scHolography.obj.sub$scHolography.sc,cells = ind)
-  scHolography.obj.sub$scHolography.sc[["spatial.neighborhood"]] <- bulk.count.obj@active.ident
-  #scHolographyPlot(scHolography.obj.sub,color.by = "spatial.neighborhood")
-
-  #DimPlot(scHolography.obj.sub$scHolography.sc,group.by = "spatial.neighborhood")
-
-  updated.obj <- scHolography.obj
-  updated.obj$scHolography.sc[["spatial.neighborhood"]] <- as.character(updated.obj$scHolography.sc[[annotationToUse]][[1]] )
-  updated.obj$scHolography.sc$spatial.neighborhood[ind] <- as.character(scHolography.obj.sub$scHolography.sc$spatial.neighborhood)
-  show(scHolographyPlot(updated.obj,color.by = "spatial.neighborhood",palette=pal))
-
-  #scHolography::scHolographyNeighborCompPlot(updated.obj,annotationToUse = "spatial.neighborhood",query.cluster =as.character(0:6))
-
-  sc.spatial.neighborhood <- scHolography.obj.sub$scHolography.sc
-  Seurat::DefaultAssay(sc.spatial.neighborhood) <- orig.assay
-  sc.spatial.neighborhood <- Seurat::FindVariableFeatures(sc.spatial.neighborhood)
-  sc.spatial.neighborhood <- Seurat::ScaleData(sc.spatial.neighborhood)
-  sc.spatial.neighborhood <- Seurat::SetIdent(sc.spatial.neighborhood, value="spatial.neighborhood")
-  mark.sc <- Seurat::FindAllMarkers(sc.spatial.neighborhood,only.pos = T)
-  # mark.sc %>%
-  #   group_by(cluster) %>%
-  #   top_n(n = 10, wt = avg_log2FC) -> top5
-
-  # DoHeatmap(sc.spatial.neighborhood, features = top5$gene) + NoLegend()+viridis::scale_fill_viridis()
-
-
-  #table(sc.spatial.neighborhood$celltype,sc.spatial.neighborhood$spatial.neighborhood)
-  bulk.count.obj <- Seurat::PrepSCTFindMarkers(bulk.count.obj)
-  mark <- Seurat::FindAllMarkers(bulk.count.obj,only.pos = T)
-  list(scHolography.obj=updated.obj,query.only.obj=scHolography.obj.sub,bulk.count.obj=bulk.count.obj, sc.marker=mark.sc,neighbor.marker=mark)
-}
-
-
-
-#' Find Spatial Neighborhood
-#' @import Seurat
-#' @import igraph
-#' @import RColorBrewer
-#' @import ggplot2
-#' @import purrr
-#' @import cluster
-#' @export
-#' @param  scHolography.obj scHolography object list
-#' @param  annotationToUse Which annotation to call identities from. Default is orig.cluster
-#' @param  query.cluster A vector of query identity types
-#' @param  orig.assay Which assay to get feature from. Default is RNA
-#' @param  nDims The number of PC dimensions used to find spatial neighborhood. The default is 10
-#' @param  resolution The resolution used for finding spatial neighborhood. The default is 0.2
-#' @param  nNeighborhood The number of of neighborhood to do k.mean clustering
-#' @param  pal Color palette to use for scHolographyPlot. Default is Paired
-#'
-findSpatialNeighborhood_new<- function (scHolography.obj, annotationToUse = "orig.ident", query.cluster,
-                                    orig.assay = "RNA", nDims = 10, resolution = 0.2, pal = "Paired",nNeighborhood=NULL,seed=60611)
+findSpatialNeighborhood <- function (scHolography.obj, annotationToUse = "orig.ident", query.cluster,
+                                     orig.assay = "RNA", nDims = 10, resolution = NULL, pal = "Paired",
+                                     nNeighborhood = NULL, seed = 60611)
 {
   graph <- igraph::graph_from_adjacency_matrix(scHolography.obj$adj.mtx,
                                                mode = "undirected")
@@ -804,18 +737,26 @@ findSpatialNeighborhood_new<- function (scHolography.obj, annotationToUse = "ori
   bulk.count.obj <- Seurat::RunPCA(bulk.count.obj, verbose = FALSE)
   bulk.count.obj <- Seurat::FindNeighbors(bulk.count.obj, dims = 1:nDims,
                                           verbose = FALSE)
-  bulk.count.obj <- Seurat::FindClusters(bulk.count.obj, verbose = FALSE,
-                                         resolution = resolution)
-  set.seed(seed)
-  if(is.null(nNeighborhood)==F){
-    sil_width <- purrr::map_dbl(2:10,  function(k){
-      model <- cluster::pam(x = scHolography.obj$scHolography.sc@meta.data[ind,c("x3d_sp","y3d_sp","z3d_sp") ] , k = k)
-      model$silinfo$avg.width
-    })
-    show((2:10)[which.max(sil_width)])
-    bulk.count.obj$kmean.cluster <-factor( kmeans(x = bulk.count.obj@reductions[["pca"]]@cell.embeddings,
+  if(is.null(resolution)){
+    bulk.count.obj <- Seurat::FindClusters(bulk.count.obj, verbose = FALSE)
+
+    set.seed(seed)
+    if (is.null(nNeighborhood)) {
+      sil_width <- purrr::map_dbl(2:10, function(k) {
+        model <- cluster::pam(x = scHolography.obj$scHolography.sc@meta.data[ind,c("x3d_sp", "y3d_sp", "z3d_sp")], k = k)
+        model$silinfo$avg.width
+      })
+
+      nNeighborhood = (2:10)[which.max(sil_width)]
+
+    }
+    bulk.count.obj$kmean.cluster <- factor(kmeans(x = bulk.count.obj@reductions[["pca"]]@cell.embeddings,
                                                   centers = nNeighborhood, nstart = 100)$cluster)
-    bulk.count.obj <- SetIdent(bulk.count.obj,value="kmean.cluster")
+    bulk.count.obj <- SetIdent(bulk.count.obj, value = "kmean.cluster")
+
+  }else{
+    bulk.count.obj <- Seurat::FindClusters(bulk.count.obj, verbose = FALSE,
+                                           resolution = resolution)
   }
 
 
@@ -844,3 +785,6 @@ findSpatialNeighborhood_new<- function (scHolography.obj, annotationToUse = "ori
        bulk.count.obj = bulk.count.obj, sc.marker = mark.sc,
        neighbor.marker = mark)
 }
+
+
+
