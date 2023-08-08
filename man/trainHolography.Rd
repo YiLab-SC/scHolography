@@ -6,11 +6,14 @@
 \usage{
 trainHolography(
   sp.integrated,
+  fov = NULL,
+  which.fov = NULL,
   n.repeat = 30,
   n.slot = 30,
   n.pcUse = 32,
   n.pcOut = 32,
-  vSeed = 60611
+  vSeed = 60611,
+  filter = T
 )
 }
 \arguments{

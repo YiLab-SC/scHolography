@@ -14,7 +14,7 @@ seuratSCT<-function(seuratObj,ndims ){
   seuratObj <- Seurat::RunUMAP(seuratObj,dims=1:ndims,verbose = FALSE)
   seuratObj <- Seurat::FindNeighbors(seuratObj, reduction = "pca", dims = 1:ndims,verbose = FALSE)
   seuratObj <- Seurat::FindClusters(seuratObj,resolution = 0.5 ,verbose = FALSE)
-  show("Data Normalized")
+  cat("Data Normalized \n")
   seuratObj
 }
 
@@ -31,10 +31,10 @@ seuratSCT<-function(seuratObj,ndims ){
 #' @param  whichReference Use which dataset as the reference for Seurat integration. Default using SC data (whichReference=2). Set whichReference=1 to use ST data as the integration reference
 #' @param  nPCtoUse Number of PCs used for analysis. Default is 32
 #'
-dataAlign<-function(low.res.sp,high.res.sp, stProcessed=F, scProcessed=F, nFeatureToUse=3000, whichReference=2,nPCtoUse=32){
+dataAlign<-function(low.res.sp,high.res.sp, stProcessed=F, scProcessed=F, nFeatureToUse=3000, whichReference=2,nPCtoUse=32,future.size=4000){
   if(stProcessed==0){low.res.sp<-seuratSCT(low.res.sp,ndims = nPCtoUse)}
   if(scProcessed==0){high.res.sp<-seuratSCT(high.res.sp,ndims = nPCtoUse)}
-  options(future.globals.maxSize = 4000 * 1024^2)
+  options(future.globals.maxSize = future.size * 1024^2)
   low.res.sp$orig.cluster<-low.res.sp$seurat_clusters
   high.res.sp$orig.cluster<-high.res.sp$seurat_clusters
   low.res.sp[["type.assay"]]<-"sp"
@@ -58,22 +58,43 @@ dataAlign<-function(low.res.sp,high.res.sp, stProcessed=F, scProcessed=F, nFeatu
   sp.integrated
 }
 
-### Generate Data for Processing
-getData <- function(sp.integrated,nPCtoOut){
-  sp.in.int<-subset(sp.integrated,cells=which(sp.integrated$type.assay=="sp"))
-  rna.in.int<-subset(sp.integrated,cells=which(sp.integrated$type.assay=="sc"))
-  sp.coord<-sp.in.int@images[[1]]@coordinates[,c('row', 'col')]
-  pixel.dist<-dist(sp.coord)
-  pixel.dist<-as.matrix(pixel.dist)
-  spatial.pca <- prcomp(pixel.dist, scale = TRUE)
-  spatial.pca.32 <- spatial.pca$x[,1:nPCtoOut]
-  spatial.pca.32.submin <- t(t(spatial.pca.32)-apply(spatial.pca.32,MARGIN = 2,min))
-  spatial.pca.32.submin.divmax <- t(t(spatial.pca.32.submin)/apply(spatial.pca.32.submin,MARGIN = 2,max))
 
-  train_X <- (as.matrix(sp.in.int@reductions$pca@cell.embeddings))
-  test_X <- (as.matrix(rna.in.int@reductions$pca@cell.embeddings))
+#' Generate Data for Processing
+#' @import SeuratObject
+#' @import Seurat
+#' @import gmodels
+#'
+getData <- function (sp.integrated, nPCtoOut, is.fov = F, fov)
+{
+  this.fov <- fov
+  if (length(this.fov) > 1) {
+    this.fov <- this.fov[1]
+  }
+  if (is.fov == F) {
+    if("imagerow"%in%colnames(sp.integrated@images[[1]]@coordinates)){
+      sp.coord <- sp.integrated@images[[1]]@coordinates[, c("imagerow","imagecol")]
+    }else if("x"%in%colnames(sp.integrated@images[[1]]@coordinates)){
+      sp.coord <- sp.integrated@images[[1]]@coordinates[, c("x","y")]
+    }
+
+  }else {
+    sp.coord <- ( SeuratObject::GetTissueCoordinates(sp.integrated[[as.character(this.fov)]][["centroids"]]))[, c("x", "y")]
+  }
+  cat("Get Data \n")
+  pixel.dist <- dist(sp.coord)
+  pixel.dist <- as.matrix(pixel.dist)
+  spatial.pca <-gmodels::fast.prcomp(pixel.dist, scale = TRUE)
+  spatial.pca.32 <- spatial.pca$x[, 1:nPCtoOut]
+  spatial.pca.32.submin <- t(t(spatial.pca.32) - apply(spatial.pca.32,MARGIN = 2, min))
+  spatial.pca.32.submin.divmax <- t(t(spatial.pca.32.submin)/apply(spatial.pca.32.submin,
+                                                                   MARGIN = 2, max))
+  train_X <- as.matrix(sp.integrated@reductions$pca@cell.embeddings[which(sp.integrated$type.assay == "sp"), ])
+  if (is.fov) {
+    train_X <- train_X[which(names(which(sp.integrated$type.assay == "sp"))%in% GetTissueCoordinates(sp.integrated[[as.character(this.fov)]][["centroids"]])[, "cell"]), ]
+  }
+  test_X <- as.matrix(sp.integrated@reductions$pca@cell.embeddings[which(sp.integrated$type.assay == "sc"), ])
   train_Y <- spatial.pca.32.submin.divmax
-  list(train_X,test_X,train_Y)
+  list(train_X, test_X, train_Y)
 }
 
 
@@ -106,7 +127,7 @@ build_model <- function(nPCtoUse, nPCtoOut) {
 
   model %>% keras::compile(
     loss = "mse",
-    optimizer = keras::optimizer_adam(learning_rate = 0.001,decay = 0.00005),
+    optimizer = keras::keras$optimizers$legacy$Adam(learning_rate = 0.001,decay = 0.00005),
     metrics = list("mean_absolute_error")
   )
   model
@@ -120,8 +141,9 @@ applyModel <- function(x_train, x_test, train_y, nRepeat ,seed,n.PCtoUse,n.PCtoO
   corr.tensor <- array(NA, dim = c(nRepeat, nrow(x_train)+nrow(x_test), nrow(x_train)+nrow(x_test)))
   early_stop <- keras::callback_early_stopping(monitor = "val_loss", patience = 20)
   tensorflow::set_random_seed(seed)
+
   for (i in 1:nRepeat) {
-    show(paste(i,"th repeat run",sep = ""))
+    cat(paste(i,"th repeat run \n",sep = ""))
     y_train <- as.matrix(train_y)
     model <- build_model(nPCtoUse = n.PCtoUse,nPCtoOut = n.PCtoOut)
     history <- model %>% keras::fit(
@@ -138,10 +160,14 @@ applyModel <- function(x_train, x_test, train_y, nRepeat ,seed,n.PCtoUse,n.PCtoO
     train_test_comb <- rbind(train_predictions,test_predictions)
     cormat <- as.matrix(dist(train_test_comb))
     corr.tensor[i,,]<-cormat
+
   }
 
-  show("Complete of NN step")
-  corr.tensor
+
+
+
+  cat("Complete of NN step \n")
+  list(corr.tensor=corr.tensor,test_predictions=test_predictions)
 }
 
 
@@ -152,8 +178,22 @@ applyModel <- function(x_train, x_test, train_y, nRepeat ,seed,n.PCtoUse,n.PCtoO
 #' @param  est.array Distance matrix between individual cells/pixels
 #' @param  nslot Maximum number of neighbors to find for stable matching
 #' @param  is3D If est.array is a 3D tensor. Default is True
-interpretDecomp<-function(est.array, nslot, is3D=T){
+interpretDecomp<-function(est.array, nslot, is3D=T,isFilter){
   if(is3D){
+
+    var.vec<-unlist(lapply(1:dim(est.array)[2], function(x){
+      sum(unlist(lapply(1:dim(est.array)[2],function(ent){var(est.array[,x,ent])})))
+    }))
+
+
+    filter.index <- NULL
+    if(isFilter){
+      filter.index <- which(var.vec<min(boxplot.stats(var.vec)$out))
+      est.array <- est.array[, filter.index, filter.index]
+
+    }
+
+
     flatten.array <-apply(est.array,c(1),function(x){
       cell2cell.dia <- (x+t(x))/2
       cell2cell.dia.rowM<-mean(cell2cell.dia)
@@ -177,7 +217,10 @@ interpretDecomp<-function(est.array, nslot, is3D=T){
   }
   cell2cell.ut<- -cell2cell.dia.norm
   diag(cell2cell.ut)<-(-99999)
+
   assign.matrix<-matrix(nrow = nrow(cell2cell.ut),ncol = nslot)
+
+
   for (k in 1:nslot) {
     cell2cell_results <- matchingR::galeShapley.collegeAdmissions(collegeUtils =cell2cell.ut, studentUtils =cell2cell.ut,slot=1, studentOptimal = T)
     assign.matrix[,k] <-cell2cell_results$matched.colleges[,1]
@@ -193,14 +236,10 @@ interpretDecomp<-function(est.array, nslot, is3D=T){
   }
   rm(cell2cell.ut)
   if(is3D){
-    var.vec<-unlist(lapply(1:dim(est.array)[2], function(x){
-      sum(unlist(lapply(1:dim(est.array)[2],function(ent){var(est.array[,x,ent])})))
-
-    }))
-    show("Complete of intepretation step")
-    list(adj.mtx,var.vec)
+    cat("Complete of intepretation step \n")
+    list(adj.mtx,var.vec,filter.index)
   }else{
-    show("Complete of intepretation step")
+    cat("Complete of intepretation step \n")
     list(adj.mtx,(-cell2cell.dia.norm))
   }
 }
@@ -217,38 +256,77 @@ interpretDecomp<-function(est.array, nslot, is3D=T){
 #' @param  n.pcOut Number of PCs used for NN output. Default is 32
 #' @param  vSeed Random seed. Default is 60611
 #'
-trainHolography<-function(sp.integrated,n.repeat=30,n.slot=30,n.pcUse=32,n.pcOut=32,vSeed=60611){
-  dat.list<-getData(sp.integrated,nPCtoOut = n.pcOut)
-  train_y<-dat.list[[3]]
-  test_x<-dat.list[[2]]
-  train_x<-dat.list[[1]]
+trainHolography<-function (sp.integrated, fov = NULL, which.fov = NULL, n.repeat = 30,
+                           n.slot = 30, n.pcUse = 32, n.pcOut = 32, vSeed = 60611,filter=T)
+{
+  dat.list <- getData(sp.integrated, nPCtoOut = n.pcOut, is.fov = (1 %in% which.fov), fov = fov)
+  train_y <- dat.list[[3]]
+  test_x <- dat.list[[2]]
+  train_x <- dat.list[[1]]
   x_train <- as.matrix(train_x)
   x_test <- as.matrix(test_x)
   rm(dat.list)
   rm(train_x)
   rm(test_x)
-  cp_decomp<-applyModel(x_train,x_test,train_y,seed = vSeed,n.PCtoUse = n.pcUse,n.PCtoOut = n.pcOut,nRepeat = n.repeat)
-  indS<-nrow(x_train)+1
-  indE<-nrow(x_train)+nrow(x_test)
-  cp_decomp_sc<-cp_decomp[,indS:indE,indS:indE]
-  interpretDecomp.rslt <- interpretDecomp(cp_decomp_sc,nslot = n.slot)
+  apply.model.rslt <- applyModel(x_train, x_test, train_y, seed = vSeed, n.PCtoUse = n.pcUse, n.PCtoOut = n.pcOut, nRepeat = n.repeat)
+  cp_decomp <- apply.model.rslt[[1]]
+  indS <- nrow(x_train) + 1
+  indE <- nrow(x_train) + nrow(x_test)
+  cp_decomp_sc <- cp_decomp[, indS:indE, indS:indE]
+  interpretDecomp.rslt <- interpretDecomp(cp_decomp_sc, nslot = n.slot,isFilter = filter)
   adj.mtx <- interpretDecomp.rslt[[1]]
   var.vec <- interpretDecomp.rslt[[2]]
-
-  g <- igraph::graph.adjacency(adj.mtx, mode="undirected")
+  filter.index <- interpretDecomp.rslt[[3]]
+  g <- igraph::graph.adjacency(adj.mtx, mode = "undirected")
   set.seed(vSeed)
   l <- igraph::layout_with_fr(g)
-  l_3d <- igraph::layout_with_fr(g, dim=3)
+  l_3d <- igraph::layout_with_fr(g, dim = 3)
+  if (is.null(which.fov)) {
+    sc.in.int <- subset(sp.integrated, cells = which(sp.integrated$type.assay ==  "sc"))
+    if(is.null(filter.index)==F){
+      sc.in.int <- subset(sc.in.int, cells = filter.index)
+    }
+    sp.in.int <- subset(sp.integrated, cells = which(sp.integrated$type.assay == "sp"))
+  }else if(length(which.fov)==2){
+    fov.ls.1 <- sp.integrated[[as.character(fov[1])]]
+    fov.ls.2 <- sp.integrated[[as.character(fov[2])]]
+    sp.integrated[[as.character(fov[1])]] <- NULL
+    sp.integrated[[as.character(fov[2])]] <- NULL
+    sc.in.int <- subset(sp.integrated, cells = which(sp.integrated$type.assay ==  "sc"))
+    sp.in.int <- subset(sp.integrated, cells = which(sp.integrated$type.assay == "sp"))
+    sp.in.int[[as.character(fov[1])]] <- fov.ls.1
+    sc.in.int[[as.character(fov[2])]] <- fov.ls.2
+    if(is.null(filter.index)==F){
+      sc.in.int <- subset(sc.in.int, cells = filter.index)
+    }
+  }else if (which.fov == 2) {
+    sc.in.int <- subset(sp.integrated, cells = which(sp.integrated$type.assay ==  "sc"))
+    sp.integrated[[as.character(fov)]] <- NULL
+    sp.in.int <- subset(sp.integrated, cells = which(sp.integrated$type.assay == "sp"))
+    if(is.null(filter.index)==F){
+      sc.in.int <- subset(sc.in.int, cells = filter.index)
+    }
+  }else if (which.fov == 1) {
+    sp.in.int <- subset(sp.integrated, cells = which(sp.integrated$type.assay == "sp"))
+    sp.integrated[[as.character(fov)]] <- NULL
+    sc.in.int <- subset(sp.integrated, cells = which(sp.integrated$type.assay == "sc"))
+    if(is.null(filter.index)==F){
+      sc.in.int <- subset(sc.in.int, cells = filter.index)
+    }
+  }
+  sc.in.int[["x_sp"]] <- l[, 1]
+  sc.in.int[["y_sp"]] <- l[, 2]
+  sc.in.int[["x3d_sp"]] <- l_3d[, 1]
+  sc.in.int[["y3d_sp"]] <- l_3d[, 2]
+  sc.in.int[["z3d_sp"]] <- l_3d[, 3]
 
-  sc.in.int <- subset(sp.integrated,cells=which(sp.integrated$type.assay=="sc"))
-  sp.in.int<-subset(sp.integrated,cells=which(sp.integrated$type.assay=="sp"))
-  sc.in.int[["x_sp"]]<-l[,1]
-  sc.in.int[["y_sp"]]<-l[,2]
-  sc.in.int[["x3d_sp"]]<-l_3d[,1]
-  sc.in.int[["y3d_sp"]]<-l_3d[,2]
-  sc.in.int[["z3d_sp"]]<-l_3d[,3]
-  sc.in.int[["motility"]]<-log(var.vec)
-  list(scHolography.sc=sc.in.int, scHolography.sp=sp.in.int,adj.mtx=adj.mtx,est.array=colMeans(cp_decomp))
+  if(is.null(filter.index)){
+    sc.in.int[["motility"]] <- (var.vec)
+  }else{
+    sc.in.int[["motility"]] <- (var.vec)[filter.index]
+    }
+
+  list(scHolography.sc = sc.in.int, scHolography.sp = sp.in.int,  adj.mtx = adj.mtx, est.array = colMeans(cp_decomp),raw.prediction = apply.model.rslt[[2]],filter.index=filter.index)
 }
 
 
@@ -325,3 +403,4 @@ distToscHolography <- function(high.res.sp,low.res.sp,dist.mat){
   inf.obj$scHolography.sc$z3d_sp<-l_3d[,3]
   inf.obj
 }
+

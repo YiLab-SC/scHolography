@@ -11,7 +11,8 @@ dataAlign(
   scProcessed = F,
   nFeatureToUse = 3000,
   whichReference = 2,
-  nPCtoUse = 32
+  nPCtoUse = 32,
+  future.size = 4000
 )
 }
 \arguments{

@@ -18,6 +18,7 @@ relativeSpatialAnalysis(
   nL = NULL,
   heatmapGp = NULL,
   pal = "Paired",
+  multi.pal = "RdYlBu",
   n.neighbor = 30,
   extreme.comp = F,
   heatmap.pal = "viridis"
