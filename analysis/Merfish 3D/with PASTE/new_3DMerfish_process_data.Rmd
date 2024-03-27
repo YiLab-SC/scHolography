@@ -1,0 +1,218 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+
+#####Load in data & infer centroid
+library(zellkonverter)
+library(Seurat)
+library(terra)
+library(ggplot2)
+counts_h5ad <- readH5AD("/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D//data/counts.h5ad")
+counts.mat <- counts_h5ad@assays@data$X
+merfish.meta <- read.csv("/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D//data/cell_labels.csv")
+merfish.meta$X <- paste0("cell_",(merfish.meta$X))
+colnames(counts.mat) <- paste0("cell_",as.numeric(colnames(counts.mat)))
+rownames(merfish.meta) <- merfish.meta$X
+
+counts.mat.sub <- counts.mat[,rownames(merfish.meta)]
+
+merfish.seurat <- CreateSeuratObject(counts = counts.mat.sub,assay = "RNA",meta.data = merfish.meta)
+
+merfish.seurat <- SCTransform(merfish.seurat)
+merfish.seurat <- RunPCA(merfish.seurat)
+merfish.seurat <- FindNeighbors(merfish.seurat)
+merfish.seurat <- FindClusters(merfish.seurat)
+merfish.seurat <- RunUMAP(merfish.seurat,dims = 1:30)
+
+# Process data for sample1
+mouse1sample1.boundary <- read.csv("/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D//data/segmented_cells_mouse1sample1.csv")
+
+mouse1sample1.boundary$X <- paste0("cell_",(mouse1sample1.boundary$X))
+rownames(mouse1sample1.boundary) <- mouse1sample1.boundary$X
+
+
+as.numeric(unlist(strsplit(mouse1sample1.boundary$boundaryX_z3[1],",")))
+as.numeric(unlist(strsplit(mouse1sample1.boundary$boundaryY_z3[1],",")))
+
+mouse1sample1.boundary.cent <- matrix(nrow=nrow(mouse1sample1.boundary), ncol = 2)
+for (i in 1:nrow(mouse1sample1.boundary)) {
+  if(length(unlist(strsplit(mouse1sample1.boundary$boundaryX_z3[i],",")))<3){
+    mouse1sample1.boundary.cent[i, ]<- c(NA,NA)
+  }else{
+    mouse1sample1.boundary.cent[i, ]<- unlist(centroids(vect(cbind(
+      as.numeric(unlist(strsplit(mouse1sample1.boundary$boundaryX_z3[i],","))),
+      as.numeric(unlist(strsplit(mouse1sample1.boundary$boundaryY_z3[i],",")))),
+      type="polygons"),inside=T)@ptr$coordinates())
+  }
+  
+}
+
+rownames(mouse1sample1.boundary.cent) <- rownames(mouse1sample1.boundary)
+colnames(mouse1sample1.boundary.cent) <-c("CentroidX","CentroidY")
+mouse1sample1.boundary.cent <- as.data.frame(mouse1sample1.boundary.cent)
+merfish.seurat.mouse1_sample1 <- subset(merfish.seurat,cells=which(merfish.seurat$sample_id%in%"mouse1_sample1"))
+
+merfish.seurat.mouse1_sample1 <- AddMetaData(merfish.seurat.mouse1_sample1,mouse1sample1.boundary.cent)
+saveRDS(merfish.seurat.mouse1_sample1,"/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D//merfish.seurat.mouse1_sample1.rds")
+```
+
+```{r}
+# Process data for sample2
+mouse1sample2.boundary <- read.csv("/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D//data/segmented_cells_mouse1sample2.csv")
+
+mouse1sample2.boundary$X <- paste0("cell_",(mouse1sample2.boundary$X))
+rownames(mouse1sample2.boundary) <- mouse1sample2.boundary$X
+
+
+as.numeric(unlist(strsplit(mouse1sample2.boundary$boundaryX_z3[1],",")))
+as.numeric(unlist(strsplit(mouse1sample2.boundary$boundaryY_z3[1],",")))
+
+mouse1sample2.boundary.cent <- matrix(nrow=nrow(mouse1sample2.boundary), ncol = 2)
+for (i in 1:nrow(mouse1sample2.boundary)) {
+  if(length(unlist(strsplit(mouse1sample2.boundary$boundaryX_z3[i],",")))<3){
+    mouse1sample2.boundary.cent[i, ]<- c(NA,NA)
+  }else{
+    mouse1sample2.boundary.cent[i, ]<- unlist(centroids(vect(cbind(
+      as.numeric(unlist(strsplit(mouse1sample2.boundary$boundaryX_z3[i],","))),
+      as.numeric(unlist(strsplit(mouse1sample2.boundary$boundaryY_z3[i],",")))),
+      type="polygons"),inside=T)@ptr$coordinates())
+  }
+  
+}
+
+rownames(mouse1sample2.boundary.cent) <- rownames(mouse1sample2.boundary)
+colnames(mouse1sample2.boundary.cent) <-c("CentroidX","CentroidY")
+mouse1sample2.boundary.cent <- as.data.frame(mouse1sample2.boundary.cent)
+merfish.seurat.mouse1_sample2 <- subset(merfish.seurat,cells=which(merfish.seurat$sample_id%in%"mouse1_sample2"))
+
+merfish.seurat.mouse1_sample2 <- AddMetaData(merfish.seurat.mouse1_sample2,mouse1sample2.boundary.cent)
+saveRDS(merfish.seurat.mouse1_sample2,"/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D//merfish.seurat.mouse1_sample2.rds")
+```
+```{r}
+# Process data for sample3
+mouse1sample3.boundary <- read.csv("/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D//data/segmented_cells_mouse1sample3.csv")
+
+mouse1sample3.boundary$X <- paste0("cell_",(mouse1sample3.boundary$X))
+rownames(mouse1sample3.boundary) <- mouse1sample3.boundary$X
+
+
+as.numeric(unlist(strsplit(mouse1sample3.boundary$boundaryX_z3[1],",")))
+as.numeric(unlist(strsplit(mouse1sample3.boundary$boundaryY_z3[1],",")))
+
+mouse1sample3.boundary.cent <- matrix(nrow=nrow(mouse1sample3.boundary), ncol = 2)
+for(i in 1:nrow(mouse1sample3.boundary)){
+  if(length(unlist(strsplit(mouse1sample3.boundary$boundaryX_z3[i],",")))<3){
+    mouse1sample3.boundary.cent[i, ]<- c(NA,NA)
+  }else{
+    mouse1sample3.boundary.cent[i, ]<- unlist(centroids(vect(cbind(
+      as.numeric(unlist(strsplit(mouse1sample3.boundary$boundaryX_z3[i],","))),
+      as.numeric(unlist(strsplit(mouse1sample3.boundary$boundaryY_z3[i],",")))),
+      type="polygons"),inside=T)@ptr$coordinates())
+  }
+  
+}
+
+rownames(mouse1sample3.boundary.cent) <- rownames(mouse1sample3.boundary)
+colnames(mouse1sample3.boundary.cent) <-c("CentroidX","CentroidY")
+mouse1sample3.boundary.cent <- as.data.frame(mouse1sample3.boundary.cent)
+merfish.seurat.mouse1_sample3 <- subset(merfish.seurat,cells=which(merfish.seurat$sample_id%in%"mouse1_sample3"))
+
+merfish.seurat.mouse1_sample3 <- AddMetaData(merfish.seurat.mouse1_sample3,mouse1sample3.boundary.cent)
+saveRDS(merfish.seurat.mouse1_sample3,"/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D//merfish.seurat.mouse1_sample3.rds")
+```
+
+```{r}
+process_slice_data <- function(sample_data, slice_id) {
+  # Subset the data based on the slice id
+  slice_data <- subset(sample_data, cells = which(sample_data$slice_id %in% slice_id))
+  
+  # Negate the CentroidX and CentroidY values
+  slice_data@meta.data$CentroidX <- -slice_data@meta.data$CentroidX
+  slice_data@meta.data$CentroidY <- -slice_data@meta.data$CentroidY
+  slice_data
+  
+}
+
+plot_slice_data <- function(slice_data) {
+  # Plot using ggplot
+  plot <- ggplot(slice_data@meta.data, aes(x = CentroidX, y = CentroidY, color = subclass)) +
+    geom_point() +
+    theme_classic()
+  
+  return(plot)
+}
+
+```
+
+
+```{r}
+# Process and plot for sample1
+merfish.seurat.mouse1_sample1.slice.list <- lapply(sort(unique(merfish.seurat.mouse1_sample1$slice_id)), function(x) process_slice_data(merfish.seurat.mouse1_sample1, x))
+
+for (i in 1:length(merfish.seurat.mouse1_sample1.slice.list)) {
+  show(plot_slice_data(merfish.seurat.mouse1_sample1.slice.list[[i]]))
+}
+
+```
+```{r}
+# Process and plot for sample2
+merfish.seurat.mouse1_sample2.slice.list <- lapply(sort(unique(merfish.seurat.mouse1_sample2$slice_id)), function(x) process_slice_data(merfish.seurat.mouse1_sample2, x))
+
+for (i in 1:length(merfish.seurat.mouse1_sample2.slice.list)) {
+  show(plot_slice_data(merfish.seurat.mouse1_sample2.slice.list[[i]]))
+}
+
+```
+```{r}
+# Process and plot for sample3
+merfish.seurat.mouse1_sample3.slice.list <- lapply(sort(unique(merfish.seurat.mouse1_sample3$slice_id)), function(x) process_slice_data(merfish.seurat.mouse1_sample3, x))
+
+for (i in 1:length(merfish.seurat.mouse1_sample3.slice.list)) {
+  show(plot_slice_data(merfish.seurat.mouse1_sample3.slice.list[[i]]))
+}
+
+```
+
+
+```{r}
+
+# Function to save data from a Seurat object
+save_seurat_data <- function(seurat_object.og, prefix,wd) {
+  # Extract gene expression data
+  set.seed(60611)
+  seurat_object <- subset(seurat_object.og,cells=sample(which(is.na(rowSums(seurat_object.og@meta.data[, c("CentroidX", "CentroidY")]))==F),1500))
+  expression_data <- t(as.data.frame(seurat_object@assays$RNA@counts))
+  
+  # Extract spatial coordinates (assuming they are stored in metadata)
+  spatial_data <- as.matrix(seurat_object@meta.data[, c("CentroidX", "CentroidY")])
+  
+  # Save data as CSV
+  write.csv(expression_data, paste0(wd,paste0(prefix, ".csv")), row.names = TRUE)
+  write.csv(spatial_data, paste0(wd,paste0(prefix, "_coor.csv")), row.names = FALSE,col.names = F)
+  saveRDS(seurat_object,paste0(wd,paste0(prefix, "_1500sub.rds")) )
+}
+
+
+save_seurat_sample_to_paste<- function(seurat_list, my_dir, this_name){
+  dir.create(paste0(my_dir,this_name))
+  for (i in seq_along(seurat_list)) {
+    #create a directory for each i as my_dir+"_i_"
+    #save data in the directory
+    save_seurat_data(seurat_list[[i]], seurat_list[[i]]$slice_id[1],paste0(my_dir,this_name) )
+  }}
+
+
+
+
+
+save_seurat_sample_to_paste(seurat_list = merfish.seurat.mouse1_sample3.slice.list, my_dir="/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D/",this_name="paste_sample3/")
+
+save_seurat_sample_to_paste(seurat_list = merfish.seurat.mouse1_sample2.slice.list, my_dir="/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D/",this_name="paste_sample2/")
+
+save_seurat_sample_to_paste(seurat_list = merfish.seurat.mouse1_sample1.slice.list, my_dir="/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D/",this_name="paste_sample1/")
+
+```
