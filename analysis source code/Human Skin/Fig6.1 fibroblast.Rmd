@@ -1,0 +1,220 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(Seurat)
+library(scHolography)
+scHolography.obj <-readRDS("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/scHolography.obj_new.rds")
+
+```
+
+```{r}
+
+spatial.neighbor.Dermal <- findSpatialNeighborhood(scHolography.obj ,annotationToUse = "celltype",query.cluster = c("Dermal"),orig.assay = "RNA")
+```
+
+```{r}
+library(dplyr)
+library(Seurat)
+
+spatial.neighbor.Dermal$scHolography.obj$scHolography.sc$spatial.neighborhood[which(spatial.neighbor.Dermal$scHolography.obj$scHolography.sc$spatial.neighborhood%in%c(as.character(1:4)))] <- paste0("Dermal_",spatial.neighbor.Dermal$scHolography.obj$scHolography.sc$spatial.neighborhood[which(spatial.neighbor.Dermal$scHolography.obj$scHolography.sc$spatial.neighborhood%in%c(as.character(1:4)))])
+
+fib.sp.col <-  c(c(colorRampPalette(RColorBrewer::brewer.pal(12,"Paired"))(10)[1],(RColorBrewer::brewer.pal(4,"Greens"))),colorRampPalette(RColorBrewer::brewer.pal(12,"Paired"))(10)[c(2,4:10)])
+neighbor.comp <- scHolography::scHolographyNeighborCompPlot(spatial.neighbor.Dermal$scHolography.obj,annotationToUse = "spatial.neighborhood",query.cluster = paste0("Dermal_",1:4),color = fib.sp.col)
+library(ggplot2)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/Fib.spatial.neighbor.comp.tiff", units="in", width=5, height=6, res=600)
+neighbor.comp$neighbor.comp.plot+theme(axis.text = element_text(size = 16,face = "bold"),axis.title.x = element_blank(),axis.title.y = element_text(size = 20,face = "bold") ,axis.text.x = element_text(angle = 30,hjust=1))+NoLegend()
+dev.off()
+
+```
+
+```{r}
+spatial.neighbor.Dermal$neighbor.marker %>%
+  group_by(cluster) %>%
+  top_n(n = 50, wt = avg_log2FC) -> top10
+DoHeatmap(spatial.neighbor.Dermal$bulk.count.obj,assay = "SCT", features = top10$gene) + NoLegend()+viridis::scale_fill_viridis()
+spatial.neighbor.Dermal$sc.marker %>%
+  group_by(cluster) %>%
+  top_n(n = 50, wt = avg_log2FC) -> top10b
+DoHeatmap(spatial.neighbor.Dermal$query.only.obj$scHolography.sc,assay = "SCT", features = top10b$gene,group.by = "spatial.neighborhood") + NoLegend()+viridis::scale_fill_viridis()
+library(RColorBrewer)
+
+fib.sp.col <-  c(c(colorRampPalette(brewer.pal(12,"Paired"))(10)[1],(brewer.pal(4,"Greens"))),colorRampPalette(brewer.pal(12,"Paired"))(10)[c(2,4:10)])
+
+
+scene = list(camera = list(eye = list(x = -1, z = 0, y = 2)))
+
+fig1 <- scHolography::scHolographyPlot(spatial.neighbor.Dermal$scHolography.obj,color.by = "spatial.neighborhood",color = fib.sp.col)%>% plotly::layout(scene = scene)
+plotly::orca(fig1, "3d.fib.all.celltype.svg",width = 7,height = 5)
+
+fig2 <- scHolography::scHolographyPlot(spatial.neighbor.Dermal$scHolography.obj,color.by = "spatial.neighborhood",color = fib.sp.col, cells = which(spatial.neighbor.Dermal$scHolography.obj$scHolography.sc$celltype%in%c("Basal","Dermal","Smooth Muscle")))%>% plotly::layout(scene = scene)
+plotly::orca(fig2, "3d.fib.basal.derm.sm.svg",width = 7,height = 5)
+
+fig3 <- scHolography::scHolographyPlot(spatial.neighbor.Dermal$scHolography.obj,color.by = "spatial.neighborhood",color = fib.sp.col,cells = which(spatial.neighbor.Dermal$scHolography.obj$scHolography.sc$celltype%in%c("Dermal")))%>% plotly::layout(scene = scene)
+plotly::orca(fig3, "3d.fib.alone.svg",width = 7,height = 5)
+
+fig4 <- scHolography::scHolographyPlot(spatial.neighbor.Dermal$scHolography.obj,color.by = "spatial.neighborhood",color = fib.sp.col,cells = which(spatial.neighbor.Dermal$scHolography.obj$scHolography.sc$celltype%in%c("Dermal","Endothelial")))%>% plotly::layout(scene = scene)
+plotly::orca(fig4, "3d.fib.endo.svg",width = 7,height = 5)
+
+fig5 <- scHolography::scHolographyPlot(spatial.neighbor.Dermal$scHolography.obj,color.by = "celltype",cells = which(spatial.neighbor.Dermal$scHolography.obj$scHolography.sc$celltype%in%c("Basal","Dermal","Smooth Muscle")))%>% plotly::layout(scene = scene)
+plotly::orca(fig5, "3d.fib.basal.derm.sm.og.type.svg",width = 7,height = 5)
+```
+```{r}
+library(ggplot2)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/Fib.spatial.neighbor.heatmap.tiff", units="in", width=8, height=9, res=300)
+DoHeatmap(spatial.neighbor.Dermal$bulk.count.obj,assay = "SCT", features = top10$gene,group.colors = brewer.pal(4,"Greens")) + NoLegend()+viridis::scale_fill_viridis()+theme(axis.text = element_text(size = 16,face = "bold"))
+dev.off()
+```
+
+```{r}
+library(RColorBrewer)
+scene = list(camera = list(eye = list(x = -1, z = 0, y = 2)))
+
+fib1 <- scHolography::scHolographyPlot(spatial.neighbor.Dermal$scHolography.obj,color.by = "spatial.neighborhood",color = fib.sp.col,cells = which(spatial.neighbor.Dermal$scHolography.obj$scHolography.sc$celltype%in%c("Basal","Dermal","Endothelial","Smooth Muscle")))%>% plotly::layout(scene = scene)
+plotly::orca(fib1, "3d.fib.svg",width = 7,height = 5)
+scHolography::scHolographyPlot(spatial.neighbor.Dermal$query.only.obj,color.by = "spatial.neighborhood",color = (brewer.pal(4,"Greens")))%>% plotly::layout(scene = scene)
+```
+
+
+
+```{r}
+fib1234 <- spatial.neighbor.Dermal$query.only.obj$scHolography.sc
+fib1234$spatial.neighborhood <-paste0("Dermal_",fib1234$spatial.neighborhood)
+fib1234$spatial.neighborhood <- factor(fib1234$spatial.neighborhood ,levels = sort(unique(fib1234$spatial.neighborhood )))
+fib1234 <- SetIdent(fib1234,value ="spatial.neighborhood")
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/Fib.peri.vln.mark.plot.tiff", units="in", width=5, height=5, res=300)
+VlnPlot(fib1234,c("RGS5","NOTCH3","MYH11","ACTA2"),assay = "SCT",ncol = 2,cols = (brewer.pal(4,"Greens")))
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/Fib.1234.col.vln.mark.plot.tiff", units="in", width=5, height=2.5, res=300)
+VlnPlot(fib1234,c("COL1A2","DCN"),assay = "SCT",ncol = 2,cols = (brewer.pal(4,"Greens")))
+dev.off()
+
+```
+```{r}
+
+
+
+VlnPlot(fib1234,c("ADH1B","GREM1"),assay = "SCT",ncol = 2,cols = (brewer.pal(4,"Greens")))
+VlnPlot(fib1234,c("ABCA8","IGF1"),assay = "SCT",ncol = 2,cols = (brewer.pal(4,"Greens")))
+VlnPlot(fib1234,c("RGS5","NOTCH3"),assay = "SCT",ncol = 2,cols = (brewer.pal(4,"Greens")))
+
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/Fib.1234.four.stack.vln.mark.plot.tiff", units="in", width=5, height=6, res=600)
+VlnPlot(fib1234,c("APCDD1","TWIST2","ADH1B","GREM1","ABCA8","IGF1","RGS5","NOTCH3"),assay = "SCT",stack = T,flip = T)+NoLegend()+theme(axis.text = element_text(size = 16,face = "bold"),axis.title.x = element_blank(),axis.title.y = element_text(size = 16,face = "bold") ,axis.text.x = element_text(angle = 30,hjust=1))+scale_fill_manual(values = c("#EDF8E9","#EDF8E9", "#BAE4B3" ,"#BAE4B3" ,"#74C476","#74C476", "#238B45", "#238B45"))
+dev.off()
+```
+
+```{r}
+library(ggpubr)
+my_comparisons <- list( c("Dermal_1", "Dermal_2"), c("Dermal_2", "Dermal_3"), c("Dermal_3", "Dermal_4") )
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//clusterDist.Fib1.2.3.4.to.4.tiff", units="in", width=5, height=5, res=600)
+scHolography::clusterDistanceBoxplot(spatial.neighbor.Dermal$scHolography.obj,annotationToUse = "spatial.neighborhood",query.cluster.list = (paste0("Dermal_",c(1:4))),reference.cluster = c("Dermal_4"))+ggplot2::scale_fill_manual(values = (brewer.pal(4,"Greens"))[1:4])+ 
+  stat_compare_means(comparisons = my_comparisons,size = 5,method.args = list(alternative="greater"))+NoLegend()+theme(axis.text = element_text(size = 16,face = "bold"),axis.title.x = element_blank(),axis.title.y = element_text(size = 20,face = "bold") ,axis.text.x = element_text(angle = 45,hjust=1))+ylab("SMN Distance")
+dev.off()
+
+
+```
+
+```{r}
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//fib1_mark_vln.tiff", units="in", width=10, height=4, res=300)
+VlnPlot(fib1234,c("APCDD1","POSTN","ENTPD1"),idents = paste0("Dermal_",1:3),assay = "SCT",ncol = 3,cols = (brewer.pal(4,"Greens"))[1:3])
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//fib2_mark_vln.tiff", units="in", width=10, height=4, res=300)
+VlnPlot(fib1234,c("ELN","PTGDS","SFRP2"),idents = paste0("Dermal_",1:3),assay = "SCT",ncol = 3,cols = (brewer.pal(4,"Greens"))[1:3])
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//fib3_mark_vln.tiff", units="in", width=10, height=4, res=300)
+VlnPlot(fib1234,c("APOD","MGP","CXCL12"),idents = paste0("Dermal_",1:3),assay = "SCT",ncol = 3,cols = (brewer.pal(4,"Greens"))[1:3])
+dev.off()
+
+```
+
+
+```{r}
+library(CellChat)
+fib.sub <- spatial.neighbor.Dermal$scHolography.obj$scHolography.sc
+cellchat.obj <- createCellChat(fib.sub,group.by = "spatial.neighborhood",assay = "SCT")
+CellChatDB <- CellChatDB.human
+CellChatDB.use <- CellChatDB 
+cellchat.obj@DB <- CellChatDB.use
+cellchat.obj <- subsetData(cellchat.obj)
+cellchat.obj <- identifyOverExpressedGenes(cellchat.obj)
+cellchat.obj <- identifyOverExpressedInteractions(cellchat.obj)
+```
+
+```{r}
+cellchat.obj <- computeCommunProb(cellchat.obj)
+# Filter out the cell-cell communication if there are only few number of cells in certain cell groups
+cellchat.obj <- filterCommunication(cellchat.obj, min.cells = 10)
+cellchat.obj <- computeCommunProbPathway(cellchat.obj)
+cellchat.obj <- aggregateNet(cellchat.obj)
+```
+```{r}
+library(RColorBrewer)
+
+cellchat.obj <- netAnalysis_computeCentrality(cellchat.obj, slot.name = "netP") 
+my.sig <- c("IL16","CD46","DESMOSOME","NECTIN","NOTCH","EGF","FGF","COLLAGEN","LAMIN")
+my.col <- c("#d11141","#ffc425","#00aebd")
+
+netAnalysis_signalingRole_heatmap(cellchat.obj, pattern = "outgoing",width = 20,height = 20,color.heatmap = "YlOrRd")
+netAnalysis_signalingRole_heatmap(cellchat.obj, pattern = "incoming",width = 20,height = 20,color.heatmap = "YlOrRd")
+
+
+netAnalysis_signalingRole_heatmap(cellchat.obj, pattern = "outgoing",width = 20,height = 20,color.heatmap = "YlOrRd",signaling = my.sig)
+netAnalysis_signalingRole_heatmap(cellchat.obj, pattern = "incoming",width = 20,height = 20,color.heatmap = "YlOrRd",signaling = my.sig )
+```
+
+```{r}
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//cellchat.collagen.tiff", units="in", width=4, height=6, res=300)
+netVisual_bubble(cellchat.obj, sources.use = c(2:5), targets.use = 1, signaling = c("COLLAGEN"), remove.isolate = T)
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//cellchat.laminin.tiff", units="in", width=4, height=6, res=300)
+netVisual_bubble(cellchat.obj, sources.use = c(2:5), targets.use = 1, signaling = c("LAMININ"), remove.isolate = T)
+```
+```{r}
+fib.sub <- SetIdent(fib.sub,value = "spatial.neighborhood")
+fib.sub.obj.mark <- FindAllMarkers(fib.sub,assay = "RNA")
+```
+
+```{r}
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//dermal.spatial.cluster.tiff", units="in", width=4, height=4, res=300)
+DimPlot(fib.sub,group.by = "spatial.neighborhood",reduction = "ind.umap",cells = which(fib.sub$celltype%in%"Dermal"))+ggtitle("Spatial Neighborhoods")+scale_colour_manual(values = brewer.pal(4,"Greens"))+NoLegend()
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//dermal.seurat.cluster.tiff", units="in", width=4, height=4, res=300)
+DimPlot(fib.sub,group.by = "orig.cluster",reduction = "ind.umap",cells = which(fib.sub$celltype%in%"Dermal"))+ggtitle("Seurat Cluster")+scale_color_brewer(palette = "Set1")
+dev.off()
+```
+
+
+```{r}
+dyn.fib <-findGeneSpatialDynamics(spatial.neighbor.Dermal$scHolography.obj,query.cluster = paste0("Dermal_",c(1:3)),ref.cluster = c("Smooth Muscle"),annotationToUse = "spatial.neighborhood",assayToUse = "SCT")
+spatialDynamicsFeaturePlot(spatial.neighbor.Dermal$scHolography.obj,query.cluster = paste0("Dermal_",c(1:3)),ref.cluster = c("Smooth Muscle"),annotationToUse = "spatial.neighborhood",geneOI = c(head(dyn.fib)$gene,tail(dyn.fib)$gene),assayToUse = "SCT")
+```
+
+```{r}
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/Fib.spatial.neighbor.1-4.dyn.heat.tiff", units="in", width=12, height=8, res=300)
+spatialDynamicsFeaturePlot(spatial.neighbor.Dermal$scHolography.obj,query.cluster=paste0("Dermal_",1:4),ref.cluster = c("Dermal_4"),annotationToUse = "spatial.neighborhood",geneOI = c("APCDD1","TWIST2","WNT5A","POSTN","SFRP2","GREM1","ADH1B","IGF1","ABCA8","CXCL12","MFAP5","RGS5","NOTCH3","ACTA2","MYH11"),assayToUse = "SCT",self.color = c((colorRampPalette(brewer.pal(12,"Paired"))(10)[1]),(brewer.pal(4,"Greens")),(colorRampPalette(brewer.pal(12,"Paired"))(10)[3:10])))
+dev.off()
+```
+
+
+```{r}
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/Fib.spatial.neighbor.distal.col6a5.tiff", units="in", width=5, height=4, res=300)
+expressionByDistPlot(spatial.neighbor.Dermal$scHolography.obj,query.cluster=paste0("Dermal_",1:3),ref.cluster = c("Smooth Muscle"),annotationToUse = "spatial.neighborhood",geneOI = "COL6A5",assayToUse = "SCT")
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/Fib.spatial.neighbor.proximal.mfap5.tiff", units="in", width=5, height=4, res=300)
+expressionByDistPlot(spatial.neighbor.Dermal$scHolography.obj,query.cluster=paste0("Dermal_",1:3),ref.cluster = c("Smooth Muscle"),annotationToUse = "spatial.neighborhood",geneOI = "MFAP5",assayToUse = "SCT")
+dev.off()
+```
+
+

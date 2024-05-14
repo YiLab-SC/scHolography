@@ -1,0 +1,505 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(scHolography)
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+```
+
+```{r}
+kid.sp <- Load10X_Spatial("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney/Visium_V1_Mouse_Kidney/")
+
+
+kid.sp <- SCTransform(kid.sp,assay = "Spatial")
+kid.sp <- RunPCA(kid.sp,assay = "SCT")
+kid.sp <- FindNeighbors(kid.sp, reduction = "pca")
+kid.sp <- FindClusters(kid.sp, verbose = FALSE)
+kid.sp <- RunUMAP(kid.sp, reduction = "pca", dims = 1:30)
+DimPlot(kid.sp,cols = "Paired",label = T)
+SpatialDimPlot(kid.sp,label = T,cols = "Paired")
+```
+
+```{r}
+# sp.markers <- FindAllMarkers(kid.sp)
+# sp.markers%>%
+#   group_by(cluster) %>%
+#   top_n(n = 20, wt = avg_log2FC)
+
+```
+```{r}
+# SpatialFeaturePlot(kid.sp,c("Lrp2", "Slc12a3")) # for PT and DCT
+# FeaturePlot(kid.sp,c("Lrp2", "Slc12a3")) # for PT and DCT
+# VlnPlot(kid.sp, "Lrp2")
+# VlnPlot(kid.sp, "Slc12a3")
+```
+```{r}
+# SpatialFeaturePlot(kid.sp,c("Slc12a1", "Aqp2")) # LOH and PC
+# FeaturePlot(kid.sp,c("Slc12a1", "Aqp2")) # LOH and PC
+# VlnPlot(kid.sp, "Slc12a1")
+# VlnPlot(kid.sp, "Aqp2")
+```
+
+
+```{r}
+kid.sc.full <- read.table("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney/GSE107585%5FMouse%5Fkidney%5Fsingle%5Fcell%5Fdatamatrix.txt")
+kid.sc <- kid.sc.full[,which(unlist(lapply(colnames(kid.sc.full), function(x) unlist(strsplit(x,"[.]"))[2]))=="2")]
+kid.sc.cluster <- unlist(kid.sc[1,])
+kid.sc <-as.matrix(kid.sc[-1,])
+
+kid.sc <- CreateSeuratObject(kid.sc)
+kid.sc <- SCTransform(kid.sc,assay = "RNA")
+kid.sc <- RunPCA(kid.sc,assay = "SCT")
+kid.sc <- FindNeighbors(kid.sc, reduction = "pca")
+kid.sc <- FindClusters(kid.sc, verbose = FALSE)
+kid.sc <- RunUMAP(kid.sc, reduction = "pca", dims = 1:30)
+DimPlot(kid.sc, label = T)
+
+
+```
+```{r}
+kid.sc[["paper_anno"]] <- kid.sc.cluster
+clus.name <- c("Endo","Podo","PT","LOH","DCT","CD-PC",
+               "CD-IC","CD-Trans","Novel1","Fib","Macro",
+               "Neutro","B lymph", "T lymph", "NK", "Novel2")
+kid.sc[["celltype"]] <- clus.name[kid.sc.cluster]
+
+library(RColorBrewer)
+getPalette = colorRampPalette(brewer.pal(12, "Paired"))
+my.scheme = getPalette(16)
+tiff("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney/scKidney.tiff", units="in", width=10, height=8, res=300)
+DimPlot(kid.sc, group.by = "celltype", label = T,cols = my.scheme)+ggplot2::ggtitle("")
+dev.off()
+```
+
+```{r}
+# anchors <- FindTransferAnchors(reference = kid.sc, query = kid.sp, normalization.method = "SCT")
+# predictions.assay <- TransferData(anchorset = anchors, refdata = kid.sc$celltype, prediction.assay = TRUE,
+#                                   weight.reduction = kid.sp[["pca"]], dims = 1:30)
+# kid.sp[["predictions"]] <- predictions.assay
+```
+```{r}
+# SpatialFeaturePlot(kid.sp, features = c("PT", "DCT"), pt.size.factor = 1.6, ncol = 2, crop = TRUE)
+# SpatialFeaturePlot(kid.sp, features = c("CD-PC", "LOH"), pt.size.factor = 1.6, ncol = 2, crop = TRUE)
+# VlnPlot(kid.sp, "PT")
+# VlnPlot(kid.sp, "DCT")
+# VlnPlot(kid.sp, "CD-PC")
+# VlnPlot(kid.sp, "LOH")
+```
+```{r}
+# kid.sp$predicted.id <- GetTransferPredictions(kid.sp)
+# SpatialDimPlot(kid.sp,group.by = "predicted.id",cols = "Paired")
+```
+
+
+
+```{r}
+
+sp.integrated <- dataAlign(low.res.sp =  kid.sp,high.res.sp =  kid.sc,nPCtoUse = 32,stProcessed = T,scProcessed = T,future.size = 7000)
+
+kidney.obj<-trainHolography(sp.integrated,n.repeat = 30)
+saveRDS(kidney.obj,"/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney//kidney.obj.rds" )
+
+```
+
+
+
+```{r}
+scene = list(camera = list(eye = list(x = -0.5, z = 1.75, y = 0)))
+fig1 <- scHolographyPlot(kidney.obj, color.by = "celltype",color = c(my.scheme[-13]))%>% plotly::layout(scene = scene)
+fig1
+
+plotly::orca(fig1, "scHolography.plot.svg",width = 8,height = 6)
+```
+
+```{r}
+clusterDistanceBoxplot(kidney.obj,annotationToUse = "celltype",query.cluster.list = c("PT","DCT","CD-IC","CD-PC","LOH"),reference.cluster = c("LOH","CD-PC"))+scale_fill_manual(values = my.scheme[c(15,5,2,3,8)])
+```
+
+
+```{r}
+# SpatialFeaturePlot(kid.sp,c("Lrp2", "Slc12a3")) # for PT and DCT
+# 
+# SpatialFeaturePlot(kid.sp,c("Slc12a1", "Aqp2")) # LOH and PC
+```
+
+
+
+
+
+```{r}
+# scHolographyPlot(kidney.obj, feature = "Lrp2")
+# scHolographyPlot(kidney.obj, feature = "Slc12a3")
+# scHolographyPlot(kidney.obj, feature = "Slc12a1")
+# scHolographyPlot(kidney.obj, feature = "Aqp2")
+```
+
+```{r}
+PT.neighbor <- findSpatialNeighborhood(kidney.obj,annotationToUse = "celltype",query.cluster = "PT")
+```
+
+```{r}
+scene1 = list(camera = list(eye = list(x = -0.5, z = 1.75, y = 0)))
+scHolographyPlot(PT.neighbor$scHolography.obj,color.by = "spatial.neighborhood",color = c("#d5b85a","#effd5f",my.scheme[-c(13,15)]))%>% plotly::layout(scene = scene1)
+```
+
+
+
+```{r}
+table(PT.neighbor$query.only.obj$scHolography.sc$spatial.neighborhood,PT.neighbor$query.only.obj$scHolography.sc$seurat_clusters)
+```
+
+
+```{r}
+PT.neighbor$neighbor.marker%>%
+  group_by(cluster) %>%
+  top_n(n = 30, wt = avg_log2FC) -> neighbor.marker.pt
+```
+```{r}
+PT.neighbor$sc.marker%>%
+  group_by(cluster) %>%
+  top_n(n = 30, wt = avg_log2FC) -> sc.marker.pt
+```
+
+```{r}
+intersect(sc.marker.pt$gene[1:30],neighbor.marker.pt$gene[1:30])
+intersect(sc.marker.pt$gene[31:60],neighbor.marker.pt$gene[31:60])
+```
+
+```{r}
+top<-c(intersect(sc.marker.pt$gene[1:30],neighbor.marker.pt$gene[1:30]),intersect(sc.marker.pt$gene[31:60],neighbor.marker.pt$gene[31:60]))
+```
+
+```{r}
+# SpatialFeaturePlot(kid.sp,c(intersect(sc.marker.pt$gene[1:30],neighbor.marker.pt$gene[1:30]))) # 1 
+# SpatialFeaturePlot(kid.sp,c(intersect(sc.marker.pt$gene[31:60],neighbor.marker.pt$gene[31:60]))) # 2
+# 
+# 
+# SpatialFeaturePlot(kid.sp,c("Slc5a2","Slc5a12","Slc34a1","Slc13a3","Slc22a28","Slc6a19")) # 1 
+# SpatialFeaturePlot(kid.sp,c("Kap", "Dbi")) # 2
+```
+```{r}
+tiff("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney/pt.spatial.neighbor.heatmap.tiff", units="in", width=8, height=9, res=300)
+DoHeatmap(PT.neighbor$bulk.count.obj,assay = "SCT", features = top,group.colors = c("#d5b85a","#effd5f")) + NoLegend()+viridis::scale_fill_viridis()+theme(axis.text = element_text(size = 16,face = "bold"))
+dev.off()
+```
+
+
+
+```{r}
+# DimPlot(PT.neighbor$query.only.obj$scHolography.sc, label = T)
+# DimPlot(PT.neighbor$query.only.obj$scHolography.sc, label = T,group.by = "spatial.neighborhood")
+# FeaturePlot(PT.neighbor$query.only.obj$scHolography.sc, c("Slc5a2","Slc5a12")) # PCT
+# FeaturePlot(PT.neighbor$query.only.obj$scHolography.sc, c("Atp11a","Slc13a3")) # PST
+# FeaturePlot(PT.neighbor$query.only.obj$scHolography.sc, c("Lrp2","Slc27a2"))
+# FeaturePlot(PT.neighbor$query.only.obj$scHolography.sc, c("Dbi","Prdx1","Kap","Prdx5"))
+# FeaturePlot(PT.neighbor$query.only.obj$scHolography.sc, c("Cndp2","Ttc36","Ndufa4","Cox6b1"))
+
+```
+
+
+```{r}
+library(ggpubr)
+my_comparisons <- list( c("1", "2"))
+clusterDistanceBoxplot(PT.neighbor$scHolography.obj,annotationToUse = "spatial.neighborhood",query.cluster.list = c("LOH","CD-PC","1","2","DCT","CD-IC"),reference.cluster = c("LOH"))
+
+```
+```{r}
+my_comparisons=list(c("1","2"))
+
+tiff("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney//PsT.Dist.LOH.tiff", units="in", width=2.3, height=3.5, res=300)
+clusterDistanceBoxplot(PT.neighbor$scHolography.obj,annotationToUse = "spatial.neighborhood",query.cluster.list = c("1","2"),reference.cluster = "LOH")+scale_fill_manual(values = c("#d5b85a","#effd5f"))+ 
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE,y_position = c(6))+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))+NoLegend()+
+  scale_x_discrete(labels=c("PT_1","PT_2"))+
+  ylim(0.5, 6.25)
+dev.off()
+
+tiff("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney//PsT.Dist.DCT.tiff", units="in", width=2.3, height=3.5, res=300)
+clusterDistanceBoxplot(PT.neighbor$scHolography.obj,annotationToUse = "spatial.neighborhood",query.cluster.list = c("1","2"),reference.cluster = "DCT")+scale_fill_manual(values = c("#d5b85a","#effd5f"))+ 
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE,y_position = c(6))+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))+NoLegend()+
+  scale_x_discrete(labels=c("PT_1","PT_2"))+
+  ylim(0.5, 6.25)
+dev.off()
+
+```
+
+
+```{r}
+SpatialFeaturePlot(kid.sp,c("Slc5a2","Slc5a12","Slc34a1","Slc13a3","Slc22a28","Slc6a19")) # 1 
+SpatialFeaturePlot(kid.sp,c("Kap", "Dbi")) # 2
+```
+
+### Celltrek
+```{r}
+library(CellTrek)
+
+low.res.sp2 <-kid.sc
+low.res.sp<-kid.sp
+
+low.res.sp2 <- RenameCells(low.res.sp2, new.names=make.names(Cells(low.res.sp2)))
+low.res.sp <- RenameCells(low.res.sp, new.names=make.names(Cells(low.res.sp)))
+stsc_traint <- CellTrek::traint(st_data=low.res.sp, sc_data=low.res.sp2, sc_assay='SCT', cell_names='celltype',norm = "SCT")
+
+stsc_celltrek <- CellTrek::celltrek(st_sc_int=stsc_traint, int_assay='traint', sc_data=low.res.sp2, sc_assay = 'SCT', reduction='pca', intp=T, intp_pnt=2000, intp_lin=F, nPCs=30, ntree=1000, dist_thresh=999, top_spot=1, spot_n=100, repel_r=20, repel_iter=20, keep_model=T)$celltrek
+
+#stsc_celltrek$celltype <- factor(stsc_celltrek$celltype, levels = sort(unique(as.character(stsc_celltrek$celltype))))
+saveRDS(stsc_celltrek,"/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney///stsc_celltrek.rds")
+
+
+tiff("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney//celltrek.plot.tiff", units="in", width=6, height=6, res=300)
+celltrek.df <- as.data.frame(stsc_celltrek@reductions$celltrek@cell.embeddings)
+celltrek.df$celltype <- stsc_celltrek$celltype
+ggplot(celltrek.df,aes(x=celltrek_1,y=celltrek_2,color=celltype))+geom_point()+theme_classic() + theme(axis.title.x = element_text(size = 15,face = "bold"),axis.title.y = element_text(size = 15,face = "bold"),axis.text = element_blank())+xlab("Predicted_X")+ylab("Predicted_Y")+
+  xlim(1000, 10000)+
+  ylim(3000,11000)+scale_color_manual(values = my.scheme)+NoLegend()
+dev.off()
+```
+```{r}
+# dataf<- data.frame(row=low.res.sp@images[[1]]@coordinates[,"imagerow"],col=low.res.sp@images[[1]]@coordinates[,"imagecol"],celltype=low.res.sp$seurat_clusters)
+# ggplot(dataf,aes(x=col,y=-row,color=celltype))+geom_jitter()+theme_classic()
+```
+
+```{r}
+anchors <- FindTransferAnchors(reference = low.res.sp, query = low.res.sp2, normalization.method = "SCT")
+predictions.assay <- TransferData(anchorset = anchors, refdata = t(low.res.sp@images[[1]]@coordinates[,c("imagecol","imagerow")]),dims = 1:30 )
+
+low.res.sp2[["predicted.row"]]<-as.vector(predictions.assay[2,])
+
+low.res.sp2[["predicted.col"]]<-as.vector(predictions.assay[1,])
+#dataf<- data.frame(row=low.res.sp@images$slice1@coordinates[,"imagerow"], col=low.res.sp@images$slice1@coordinates[,"imagecol"],celltype=low.res.sp$seurat_clusters)
+dataf<- data.frame(row=low.res.sp2[["predicted.row"]]$predicted.row,col=low.res.sp2[["predicted.col"]]$predicted.col,celltype=low.res.sp2$celltype)
+dataf$celltype <- factor(dataf$celltype,levels = stringr::str_sort(unique(as.character(dataf$celltype)),numeric = T))
+
+tiff("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney//seurat.plot.tiff", units="in", width=6, height=6, res=300)
+ggplot(dataf,aes(x=col,y=-row,color=celltype))+geom_jitter()+theme_classic()+
+  xlim(1000, 10000)+
+  ylim(-11000, -3000)+ theme(axis.title.x = element_text(size = 15,face = "bold"),axis.title.y = element_text(size = 15,face = "bold"),axis.text = element_blank())+xlab("Predicted_X")+ylab("Predicted_Y")+scale_color_manual(values = my.scheme)+NoLegend()
+dev.off()
+```
+
+
+```{r}
+
+a <- cbind(rownames(kid.sc@assays$RNA@counts),(as.matrix(kid.sc@assays$RNA@counts)))
+colnames(a) <- paste("c",colnames(a),sep = "_")
+colnames(a)[1] <- "GENES"
+write.table(a,"/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney///expressionSC.txt",row.names = F,col.names = colnames(a),quote = F,sep = '\t')
+
+b <- cbind(rownames(kid.sp@assays$Spatial@counts),as.matrix(kid.sp@assays$Spatial@counts))
+colnames(b)[1] <- "GENES"
+write.table(b,"/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney///expressionST.txt",row.names = F,col.names = colnames(b),quote = F,sep = '\t')
+
+write.table(data.frame(SpotID=colnames(kid.sp),row=kid.sp@images$slice1@coordinates$imagerow,col=kid.sp@images$slice1@coordinates$imagecol),"/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney///coordinateST.txt",quote = F,row.names = F,sep = '\t')
+
+write.table(data.frame(Cell_IDs=paste("c",colnames((as.matrix(kid.sc@assays$RNA@counts))),sep = "_"),CellType=as.character(kid.sc$celltype)),"/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney///celltypeSC.txt",quote = F,row.names = F,sep = '\t')
+
+### cytospace -sp expressionSC.txt -ctp celltypeSC.txt -stp expressionST.txt -cp coordinateST.txt -o cytospace_results -sm lap_CSPR
+
+
+
+cytospace <- read.csv("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney//cytospace_results/assigned_locations.csv")
+cytospace$OriginalCID <- unlist(lapply(strsplit(cytospace$OriginalCID,split = "_"),function(x) x[2]))
+a <- lapply(unique(cytospace$OriginalCID),function(x){
+  if(length(unique(cytospace[which(cytospace$OriginalCID%in%x),"row"]))+length(unique(cytospace[which(cytospace$OriginalCID%in%x),"col"]))==2){
+    c(unique(cytospace[which(cytospace$OriginalCID%in%x),"row"]),unique(cytospace[which(cytospace$OriginalCID%in%x),"col"]))
+  }else{
+    c(mean(cytospace[which(cytospace$OriginalCID%in%x),"row"]),mean(cytospace[which(cytospace$OriginalCID%in%x),"col"]))
+  }
+})
+
+names(a) <- unique(cytospace$OriginalCID)
+
+
+cyto.mapped <-unique(cytospace$OriginalCID)
+cyto.coord <- lapply(cyto.mapped,function(x){
+  if(length(unique(cytospace[which(cytospace$OriginalCID%in%x),"row"]))+length(unique(cytospace[which(cytospace$OriginalCID%in%x),"col"]))==2){
+    c(unique(cytospace[which(cytospace$OriginalCID%in%x),"row"]),unique(cytospace[which(cytospace$OriginalCID%in%x),"col"]))
+  }else{
+    c(mean(cytospace[which(cytospace$OriginalCID%in%x),"row"]),mean(cytospace[which(cytospace$OriginalCID%in%x),"col"]))
+  }
+})
+cyto.coord <- matrix(unlist(cyto.coord),ncol = 2,byrow = T)
+rownames(cyto.coord) <- cyto.mapped
+colnames(cyto.coord) <- c("row","col")
+kid.sc.cyto <- subset(kid.sc,cells = cyto.mapped)
+
+
+set.seed(60611)
+rand <- matrix(runif(nrow(cyto.coord)*ncol(cyto.coord))-.5,ncol = 2)*100
+cyto.coord <- cyto.coord+rand
+
+
+kid.sc.cyto[["row"]] <- cyto.coord[,"row"]
+kid.sc.cyto[["col"]] <- cyto.coord[,"col"]
+
+
+
+tiff("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney//cyto.plot.tiff", units="in", width=6, height=6, res=300)
+dataf<- data.frame(row=kid.sc.cyto[["row"]]$row , col=kid.sc.cyto[["col"]]$col,celltype=kid.sc.cyto$celltype)
+dataf$celltype <- factor(dataf$celltype,levels = stringr::str_sort(unique(as.character(dataf$celltype)),numeric = T))
+ggplot(dataf,aes(x=col,y=-row,color=celltype))+geom_point()+theme_classic() +
+  xlim(1000, 10000)+
+  ylim(-11000, -3000)+ theme(axis.title.x = element_text(size = 15,face = "bold"),axis.title.y = element_text(size = 15,face = "bold"),axis.text = element_blank())+xlab("Predicted_X")+ylab("Predicted_Y")+scale_color_manual(values = my.scheme)+NoLegend()
+dev.off()
+
+```
+
+
+```{r}
+################
+Tangram.rslt <- read.csv("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney///Tangram.rslt_new.txt", header=FALSE)
+Tangram.rslt <- as.matrix(Tangram.rslt)
+set.seed(60611)
+rand <- matrix(runif(8000*2)-.5,ncol = 2)*100
+
+
+tangram.pre <- kid.sp@images$slice1@coordinates[apply(Tangram.rslt,1,which.max),c("imagerow","imagecol")]+rand
+kid.sc[["tangram.pre.x"]] <- tangram.pre[,1]
+kid.sc[["tangram.pre.y"]] <- tangram.pre[,2]
+kid.sc[["tangram.conf"]] <- apply(Tangram.rslt,1,max)
+
+tiff("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney//tangram.plot.tiff", units="in", width=6, height=6, res=300)
+dataf<- data.frame(row=kid.sc[["tangram.pre.x"]]$tangram.pre.x, col=kid.sc[["tangram.pre.y"]]$tangram.pre.y,celltype=kid.sc$celltype,prob=kid.sc$tangram.conf)
+dataf$celltype <- factor(dataf$celltype,levels = stringr::str_sort(unique(as.character(dataf$celltype)),numeric = T))
+
+ggplot(dataf,aes(x=col,y=-row,color=celltype))+geom_point()+theme_classic() +
+  xlim(1000, 10000)+
+  ylim(-11000, -3000)+ theme(axis.title.x = element_text(size = 15,face = "bold"),axis.title.y = element_text(size = 15,face = "bold"),axis.text = element_blank())+xlab("Predicted_X")+ylab("Predicted_Y")+scale_color_manual(values = my.scheme)+NoLegend()
+dev.off()
+```
+
+
+
+
+
+```{r}
+scHolo <- as.matrix(dist(kidney.obj$scHolography.sc@meta.data[,c("z3d_sp","y3d_sp","x3d_sp")]))
+
+
+celltrek <- as.matrix(dist(stsc_celltrek@reductions$celltrek@cell.embeddings))
+
+
+cyto <- as.matrix(dist(kid.sc.cyto@meta.data[,c("row","col")]))
+
+
+seurat <- as.matrix(dist(low.res.sp2@meta.data[,c("predicted.row","predicted.col")]))
+
+tangram <- as.matrix(dist(kid.sc@meta.data[,c("tangram.pre.x","tangram.pre.y")]))
+```
+
+
+```{r}
+
+findClusterDistance <- function(dist.mat, query.cluster,reference.cluster){
+  out <- lapply(query.cluster, function(x){
+    type <- colnames(kid.sc)[which(kid.sc$celltype %in% x)]
+    base <- colnames(kid.sc)[which(kid.sc$celltype %in% reference.cluster)]
+    dist.mat[intersect(type,colnames(dist.mat)),intersect(base,colnames(dist.mat))]
+  })
+  names(out) <- query.cluster
+  out
+}
+
+
+scholo.dist <- findClusterDistance(scHolo,query.cluster = c("PT","DCT","CD-IC","CD-PC","LOH"),reference.cluster=c("CD-PC","LOH"))
+#lapply(scholo.dist, function(x) summary(rowMeans(x)))
+
+celltrek.dist <- findClusterDistance(celltrek,query.cluster = c("PT","DCT","CD-IC","CD-PC","LOH"),reference.cluster=c("CD-PC","LOH"))
+#lapply(celltrek.dist, function(x) summary(rowMeans(x)))
+
+
+cyto.dist <- findClusterDistance(cyto,query.cluster = c("PT","DCT","CD-IC","CD-PC","LOH"),reference.cluster=c("CD-PC","LOH"))
+#lapply(cyto.dist, function(x) summary(rowMeans(x)))
+
+
+seurat.dist <- findClusterDistance(seurat,query.cluster = c("PT","DCT","CD-IC","CD-PC","LOH"),reference.cluster=c("CD-PC","LOH"))
+#lapply(seurat.dist, function(x) summary(rowMeans(x)))
+
+tangram.dist <- findClusterDistance(tangram,query.cluster = c("PT","DCT","CD-IC","CD-PC","LOH"),reference.cluster=c("CD-PC","LOH"))
+
+
+```
+
+
+```{r}
+
+scholo.dat <- data.frame(dist = unlist(lapply(scholo.dist, rowMeans)),celltype = kid.sc$celltype[paste0(unlist(lapply(names(unlist(lapply(scholo.dist, rowMeans))),function(x) unlist(strsplit(x,split = "[.]"))[2])),".2")])
+
+celltrek.dat <- data.frame(dist = unlist(lapply(celltrek.dist, rowMeans)),celltype = kid.sc$celltype[paste0(unlist(lapply(names(unlist(lapply(celltrek.dist, rowMeans))),function(x) unlist(strsplit(x,split = "[.]"))[2])),".2")])
+
+cyto.dat <- data.frame(dist = unlist(lapply(cyto.dist, rowMeans)),celltype = kid.sc$celltype[paste0(unlist(lapply(names(unlist(lapply(cyto.dist, rowMeans))),function(x) unlist(strsplit(x,split = "[.]"))[2])),".2")])
+
+seurat.dat <- data.frame(dist = unlist(lapply(seurat.dist, rowMeans)),celltype = kid.sc$celltype[paste0(unlist(lapply(names(unlist(lapply(seurat.dist, rowMeans))),function(x) unlist(strsplit(x,split = "[.]"))[2])),".2")])
+
+tangram.dat <- data.frame(dist = unlist(lapply(tangram.dist, rowMeans)),celltype = kid.sc$celltype[paste0(unlist(lapply(names(unlist(lapply(tangram.dist, rowMeans))),function(x) unlist(strsplit(x,split = "[.]"))[2])),".2")])
+```
+
+```{r}
+scholo.dat$celltype <- factor(as.character(scholo.dat$celltype),levels = c("PT","DCT","CD-IC","CD-PC","LOH"))
+celltrek.dat$celltype <- factor(as.character(celltrek.dat$celltype),levels = c("PT","DCT","CD-IC","CD-PC","LOH"))
+cyto.dat$celltype <- factor(as.character(cyto.dat$celltype),levels = c("PT","DCT","CD-IC","CD-PC","LOH"))
+seurat.dat$celltype <- factor(as.character(seurat.dat$celltype),levels = c("PT","DCT","CD-IC","CD-PC","LOH"))
+tangram.dat$celltype <- factor(as.character(tangram.dat$celltype),levels = c("PT","DCT","CD-IC","CD-PC","LOH"))
+```
+
+```{r}
+library(ggpubr)
+
+my_comparisons <- list(c("PT","CD-IC"),c("DCT","CD-IC"),c("CD-IC","LOH"),c("CD-IC","CD-PC"))
+
+
+
+tiff("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney//CAs.Dist.scholo.tiff", units="in", width=4.5, height=6, res=300)
+ggplot(scholo.dat, aes(x=celltype, y=dist/mean(scholo.dat[which(scholo.dat$celltype%in%c("CD-PC","LOH")),"dist"]), fill=celltype)) +
+  geom_boxplot()+theme_classic()+scale_fill_manual(values = my.scheme[c(15,5,2,3,8)])+ 
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE,y_position = c(c(2.6,2.4),c(2.7,2.5)))+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))+NoLegend()+
+  scale_x_discrete(labels=c("PT","DCT","CD-IC","CD-PC","LOH"))
+dev.off()
+```
+```{r}
+tiff("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney//CAs.Dist.celltrek.tiff", units="in", width=4.5, height=6, res=300)
+ggplot(celltrek.dat, aes(x=celltype, y=dist/mean(celltrek.dat[which(celltrek.dat$celltype%in%c("CD-PC","LOH")),"dist"]), fill=celltype)) +
+  geom_boxplot()+theme_classic()+scale_fill_manual(values = my.scheme[c(15,5,2,3,8)])+ 
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE,y_position = c(c(2.1,1.9),c(2.2,2.0)))+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))+NoLegend()+
+  scale_x_discrete(labels=c("PT","DCT","CD-IC","CD-PC","LOH"))
+dev.off()
+```
+```{r}
+
+tiff("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney//CAs.Dist.cyto.tiff", units="in", width=4.5, height=6, res=300)
+ggplot(cyto.dat, aes(x=celltype, y=dist/mean(cyto.dat[which(cyto.dat$celltype%in%c("CD-PC","LOH")),"dist"]), fill=celltype)) +
+  geom_boxplot()+theme_classic()+scale_fill_manual(values = my.scheme[c(15,5,2,3,8)])+ 
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE,y_position = c(c(3.0,2.8),c(3.1,2.9)))+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))+NoLegend()+
+  scale_x_discrete(labels=c("PT","DCT","CD-IC","CD-PC","LOH"))
+dev.off()
+```
+```{r}
+
+tiff("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney//CAs.Dist.seurat.tiff", units="in", width=4.5, height=6, res=300)
+ggplot(seurat.dat, aes(x=celltype, y=dist/mean(seurat.dat[which(seurat.dat$celltype%in%c("CD-PC","LOH")),"dist"]), fill=celltype)) +
+  geom_boxplot()+theme_classic()+scale_fill_manual(values = my.scheme[c(15,5,2,3,8)])+ 
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE,y_position = c(c(3.0,2.8),c(3.1,2.9)))+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))+NoLegend()+
+  scale_x_discrete(labels=c("PT","DCT","CD-IC","CD-PC","LOH"))
+dev.off()
+```
+```{r}
+
+tiff("/projects/b1042/YiLab/Cady/Code_3rdDraft/Mouse Kidney//CAs.Dist.tangram.tiff", units="in", width=4.5, height=6, res=300)
+ggplot(tangram.dat, aes(x=celltype, y=dist/mean(tangram.dat[which(tangram.dat$celltype%in%c("CD-PC","LOH")),"dist"]), fill=celltype)) +
+  geom_boxplot()+theme_classic()+scale_fill_manual(values = my.scheme[c(15,5,2,3,8)])+ 
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE,y_position = c(c(3.0,2.8),c(3.1,2.9)))+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))+NoLegend()+
+  scale_x_discrete(labels=c("PT","DCT","CD-IC","CD-PC","LOH"))
+dev.off()
+```
+
+
+
+
+
+
+
+
+

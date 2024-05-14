@@ -1,0 +1,545 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(Seurat)
+low.res.sp<-Seurat::Load10X_Spatial("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Data/human/st_Foreskin/20220712/A1/")
+high.res.sp<-readRDS("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Spatial Transcriptomics/VAE/f2.rds")
+```
+
+```{r}
+load("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/FS_other method.RData")
+```
+
+```{r}
+library(CellTrek)
+
+low.res.sp2 <-high.res.sp
+low.res.sp <-SCTransform(low.res.sp,assay = "Spatial")
+
+low.res.sp2 <- RenameCells(low.res.sp2, new.names=make.names(Cells(low.res.sp2)))
+low.res.sp <- RenameCells(low.res.sp, new.names=make.names(Cells(low.res.sp)))
+stsc_traint <- CellTrek::traint(st_data=low.res.sp, sc_data=low.res.sp2, sc_assay='SCT', cell_names='seurat_clusters',norm = "SCT")
+
+stsc_celltrek <- CellTrek::celltrek(st_sc_int=stsc_traint, int_assay='traint', sc_data=low.res.sp2, sc_assay = 'SCT', reduction='pca', intp=T, intp_pnt=2000, intp_lin=F, nPCs=30, ntree=1000, dist_thresh=999, top_spot=1, spot_n=100, repel_r=20, repel_iter=20, keep_model=T)$celltrek
+
+stsc_celltrek$celltype <- factor(stsc_celltrek$seurat_clusters, levels = sort(unique(as.character(stsc_celltrek$seurat_clusters))))
+DimPlot(stsc_celltrek,reduction = "celltrek",group.by = "seurat_clusters")
+```
+
+```{r}
+other.color <- c("#A4DE02","#68BB59","#A6CEE3", "#3F8EAA", "#B89B74", "#E52829", "#FDB762", "#ED8F47", "#9471B4", "#DDD399", "#B15928")
+
+high.res.sp$celltype<-as.character(high.res.sp$seurat_clusters)
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("2","6","8"))]<-"Suprabasal"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("3","10","17"))]<-"Basal"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("5"))]<-"Melanocyte"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("0","1","16","7"))]<-"Dermal"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("9","11"))]<-"Endothelial"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("15","18"))]<-"Immune"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("12"))]<-"Schwann"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("14"))]<-"Smooth Muscle"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("4"))]<-"Glandular Epithelium"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("13"))]<-"Lymphatic Endothelial"
+high.res.sp$celltype<-as.factor(high.res.sp$celltype)
+```
+
+```{r}
+
+
+stsc_celltrek$celltype <- high.res.sp$celltype[unlist(lapply(colnames(stsc_celltrek),function(x){paste(unlist(strsplit(x,"[.]")),collapse = "-") }))]
+DimPlot(stsc_celltrek,reduction = "celltrek",group.by = "celltype")
+saveRDS(stsc_celltrek,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//stsc_celltrek.rds")
+stsc_celltrek <- readRDS("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//stsc_celltrek.rds")
+```
+```{r}
+library(dplyr)
+findSpatialNeighborhood_bench<-function (seurat.obj,orig.seurat,dist.mat, annotationToUse = "celltype", query.cluster, orig.assay = "RNA", nDims = 10, resolution = 0.2, pal = "Paired",  nNeighborhood = NULL, seed = 60611) 
+{
+  
+  dist <- dist.mat
+  orig.seurat <- subset(orig.seurat,cells=unlist(lapply(colnames(seurat.obj),function(x){paste(unlist(strsplit(x,"[.]")),collapse = "-") })))
+  
+  bulk.count <- apply(dist, 1, function(x) {
+    neighbor <- which(x<=sort(x)[30])
+    rowSums(orig.seurat@assays[[orig.assay]]@counts[,  neighbor])
+  })
+  #return(bulk.count)
+  colnames(bulk.count) <- colnames(seurat.obj)
+  bulk.count <- as(bulk.count, "sparseMatrix")
+  ind <- which(seurat.obj[[annotationToUse]][[1]] %in% 
+                 query.cluster)
+  bulk.count.sub <- bulk.count[, ind]
+  bulk.count.obj <- Seurat::CreateSeuratObject(bulk.count.sub,   verbose = FALSE)
+  bulk.count.obj <- Seurat::SCTransform(bulk.count.obj, verbose = FALSE)
+  bulk.count.obj <- Seurat::RunPCA(bulk.count.obj, verbose = FALSE)
+  bulk.count.obj <- Seurat::FindNeighbors(bulk.count.obj, dims = 1:nDims, 
+                                          verbose = FALSE)
+  bulk.count.obj <- Seurat::FindClusters(bulk.count.obj, verbose = FALSE, 
+                                         resolution = resolution)
+  set.seed(seed)
+  if (is.null(nNeighborhood) == F) {
+    sil_width <- purrr::map_dbl(2:10, function(k) {
+      model <- cluster::pam(x =  seurat.obj@reductions$celltrek@cell.embeddings[ind,], k = k)
+      model$silinfo$avg.width
+    })
+    show((2:10)[which.max(sil_width)])
+    bulk.count.obj$kmean.cluster <- factor(kmeans(x = bulk.count.obj@reductions[["pca"]]@cell.embeddings,  centers = nNeighborhood, nstart = 100)$cluster)
+    bulk.count.obj <- SetIdent(bulk.count.obj, value = "kmean.cluster")
+  }
+  bulk.count.obj <- Seurat::RunUMAP(bulk.count.obj, dims = 1:nDims, 
+                                    verbose = FALSE)
+  
+  seurat.obj$spatial.neighborhood <- as.character(seurat.obj[[annotationToUse]][[1]])
+  seurat.obj$spatial.neighborhood[colnames(bulk.count.obj)] <- as.character(bulk.count.obj@active.ident)
+  list(seurat.obj,bulk.count.obj)
+}
+```
+
+```{r}
+celltrek <- as.matrix(dist(stsc_celltrek@reductions$celltrek@cell.embeddings))
+
+celltrek.bulk.count.obj <- findSpatialNeighborhood_bench(seurat.obj = stsc_celltrek,orig.seurat = high.res.sp,dist.mat = celltrek,query.cluster = "Dermal",nNeighborhood = 2)
+celltrek.bulk.count.obj.neighb <- celltrek.bulk.count.obj[[2]]
+celltrek.bulk.count.obj <- celltrek.bulk.count.obj[[1]]
+
+celltrek.bulk.count.obj$row <- as.data.frame(celltrek.bulk.count.obj@reductions$celltrek@cell.embeddings)[,1]
+celltrek.bulk.count.obj$col <- as.data.frame(celltrek.bulk.count.obj@reductions$celltrek@cell.embeddings)[,2]
+library(plotly)
+library(dplyr)
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/celltrek.recon.tiff", units="in", width=4.5, height=4.5, res=600)
+ggplot(celltrek.bulk.count.obj@meta.data)+geom_point(aes(x=row,y=col,color=spatial.neighborhood),size=1)+theme_void()+scale_color_manual(values = other.color)+NoLegend()
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/celltrek.recon.derm.tiff", units="in", width=4.5, height=4.5, res=600)
+ggplot(celltrek.bulk.count.obj@meta.data[which(celltrek.bulk.count.obj@meta.data$spatial.neighborhood%in%c(1,2)),])+geom_point(aes(x=row,y=col,color=spatial.neighborhood),size=1)+theme_void()+scale_color_manual(values = other.color)+NoLegend()
+dev.off()
+
+#plot_ly(x=celltrek.bulk.count.obj@reductions$celltrek@cell.embeddings[,1],y=celltrek.bulk.count.obj@reductions$celltrek@cell.embeddings[,2],color=~celltrek.bulk.count.obj$spatial.neighborhood,colors = "Paired", marker = list(size = 3))%>% add_markers()
+```
+
+```{r}
+celltrek.bulk.count.obj <- SetIdent(celltrek.bulk.count.obj, value = "spatial.neighborhood")
+celltrek.sp.fib.mark <- FindMarkers(celltrek.bulk.count.obj,ident.1 = "1",ident.2 = "2")
+
+
+
+celltrek.sp.fib.mark%>%
+    top_n(n = 12, wt = avg_log2FC)
+celltrek.sp.fib.mark%>%
+    top_n(n = 12, wt = -avg_log2FC)
+celltrek.sp.fib.mark%>%filter(p_val<=0.05)
+
+low.res.sp2 <- RenameCells(low.res.sp2,new.names = unlist(lapply(colnames(low.res.sp2),function(x)  unlist(strsplit(x,"-") )[1])))
+celltrek.bulk.count.obj <- RenameCells(celltrek.bulk.count.obj, new.names = unlist(lapply(colnames(celltrek.bulk.count.obj),function(x)  unlist(strsplit(x,"[.]") )[1])))
+low.res.sp2.sub <- subset(low.res.sp2, cells = colnames(celltrek.bulk.count.obj))
+
+low.res.sp2.sub$spatial.neighborhood <- celltrek.bulk.count.obj$spatial.neighborhood
+low.res.sp2.sub <- SetIdent(low.res.sp2.sub, value = "spatial.neighborhood")
+
+DoHeatmap(low.res.sp2.sub,features = c(rownames(celltrek.sp.fib.mark%>%
+               top_n(n = 12, wt = avg_log2FC)),rownames(celltrek.sp.fib.mark%>%top_n(n = 12, wt = -avg_log2FC))),cells = which(low.res.sp2.sub@active.ident%in%c("1","2")))
+```
+
+
+```{r}
+celltrek.sp.fib.mark.neighb <- FindMarkers(celltrek.bulk.count.obj.neighb,ident.1 = "1",ident.2 = "2")
+celltrek.sp.fib.mark.neighb%>%filter(p_val<=0.05)
+celltrek.sp.fib.mark.neighb%>%
+    top_n(n = 12, wt = avg_log2FC)
+celltrek.sp.fib.mark.neighb%>%
+    top_n(n = 12, wt = -avg_log2FC)
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/celltrek.recon.derm.heat.tiff", units="in", width=6, height=4.5, res=600)
+DoHeatmap(celltrek.bulk.count.obj.neighb,assay = "SCT",features = c(rownames(celltrek.sp.fib.mark.neighb%>%
+               top_n(n = 12, wt = avg_log2FC)),rownames(celltrek.sp.fib.mark.neighb%>%
+                                                            top_n(n = 12, wt = -avg_log2FC))),group.colors = other.color[1:2],label = F)+viridis::scale_fill_viridis()
+dev.off()
+```
+```{r}
+low.res.sp2 <- high.res.sp
+anchors <- FindTransferAnchors(reference = low.res.sp, query = low.res.sp2, normalization.method = "SCT")
+predictions.assay <- TransferData(anchorset = anchors, refdata = t(low.res.sp@images[[1]]@coordinates[,c("imagecol","imagerow")]),dims = 1:30 )
+
+low.res.sp2[["predicted.row"]]<-as.vector(predictions.assay[2,])
+
+low.res.sp2[["predicted.col"]]<-as.vector(predictions.assay[1,])
+
+dataf<- data.frame(row=low.res.sp2[["predicted.row"]]$predicted.row, col=low.res.sp2[["predicted.col"]]$predicted.col,celltype=low.res.sp2$celltype)
+dataf$celltype <- factor(dataf$celltype,levels = stringr::str_sort(unique(as.character(dataf$celltype)),numeric = T))
+library(ggplot2)
+
+
+ggplot(dataf,aes(x=col,y=-row,color=celltype))+geom_jitter()+theme_classic() 
+
+```
+```{r}
+findSpatialNeighborhood_bench<-function (seurat.obj,orig.seurat,dist.mat, annotationToUse = "celltype", query.cluster, orig.assay = "RNA", nDims = 10, resolution = 0.2, pal = "Paired",  nNeighborhood = NULL, seed = 60611) 
+{
+  
+  dist <- dist.mat
+  orig.seurat <- subset(orig.seurat,cells=unlist(lapply(colnames(seurat.obj),function(x){paste(unlist(strsplit(x,"[.]")),collapse = "-") })))
+  
+  bulk.count <- apply(dist, 1, function(x) {
+    neighbor <- which(x<=sort(x)[30])
+    rowSums(orig.seurat@assays[[orig.assay]]@counts[,  neighbor])
+  })
+  #return(bulk.count)
+  colnames(bulk.count) <- colnames(seurat.obj)
+  bulk.count <- as(bulk.count, "sparseMatrix")
+  ind <- which(seurat.obj[[annotationToUse]][[1]] %in% 
+                 query.cluster)
+  bulk.count.sub <- bulk.count[, ind]
+  bulk.count.obj <- Seurat::CreateSeuratObject(bulk.count.sub,   verbose = FALSE)
+  bulk.count.obj <- Seurat::SCTransform(bulk.count.obj, verbose = FALSE)
+  bulk.count.obj <- Seurat::RunPCA(bulk.count.obj, verbose = FALSE)
+  bulk.count.obj <- Seurat::FindNeighbors(bulk.count.obj, dims = 1:nDims, 
+                                          verbose = FALSE)
+  bulk.count.obj <- Seurat::FindClusters(bulk.count.obj, verbose = FALSE, 
+                                         resolution = resolution)
+  set.seed(seed)
+  if (is.null(nNeighborhood) == F) {
+    sil_width <- purrr::map_dbl(2:10, function(k) {
+      model <- cluster::pam(x =  low.res.sp2@meta.data[ind,c("predicted.row","predicted.col")], k = k)
+      model$silinfo$avg.width
+    })
+    show((2:10)[which.max(sil_width)])
+    bulk.count.obj$kmean.cluster <- factor(kmeans(x = bulk.count.obj@reductions[["pca"]]@cell.embeddings,  centers = nNeighborhood, nstart = 100)$cluster)
+    bulk.count.obj <- SetIdent(bulk.count.obj, value = "kmean.cluster")
+  }
+  bulk.count.obj <- Seurat::RunUMAP(bulk.count.obj, dims = 1:nDims, 
+                                    verbose = FALSE)
+  
+  seurat.obj$spatial.neighborhood <- as.character(seurat.obj[[annotationToUse]][[1]])
+  seurat.obj$spatial.neighborhood[colnames(bulk.count.obj)] <- as.character(bulk.count.obj@active.ident)
+  list(seurat.obj,bulk.count.obj)
+}
+seurat <- as.matrix(dist(low.res.sp2@meta.data[,c("predicted.row","predicted.col")]))
+
+seurat.bulk.count.obj <- findSpatialNeighborhood_bench(seurat.obj = low.res.sp2,orig.seurat = high.res.sp,dist.mat = seurat,query.cluster = "Dermal",nNeighborhood = 2)
+seurat.bulk.count.obj.neighb <- seurat.bulk.count.obj[[2]]
+seurat.bulk.count.obj <- seurat.bulk.count.obj[[1]]
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/seurat.recon.tiff", units="in", width=4.5, height=4.5, res=600)
+ggplot(seurat.bulk.count.obj@meta.data)+geom_point(aes(x=predicted.col,y=-predicted.row,color=spatial.neighborhood),size=1)+theme_void()+scale_color_manual(values = other.color)+NoLegend()
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/seurat.recon.derm.tiff", units="in", width=4.5, height=4.5, res=600)
+ggplot(seurat.bulk.count.obj@meta.data[which(seurat.bulk.count.obj@meta.data$spatial.neighborhood%in%c(1,2)),])+geom_point(aes(x=predicted.col,y=-predicted.row,color=spatial.neighborhood),size=1)+theme_void()+scale_color_manual(values = other.color)+NoLegend()
+dev.off()
+
+#plot_ly(seurat.bulk.count.obj@meta.data,x=~predicted.col,y=~-predicted.row,color=~spatial.neighborhood,colors = "Paired", marker = list(size = 3))%>% add_markers()
+```
+
+```{r}
+seurat.bulk.count.obj <- SetIdent(seurat.bulk.count.obj, value = "spatial.neighborhood")
+seurat.sp.fib.mark <- FindMarkers(seurat.bulk.count.obj,ident.1 = "1",ident.2 = "2")
+
+
+
+seurat.sp.fib.mark%>%
+    top_n(n = 12, wt = avg_log2FC)
+seurat.sp.fib.mark%>%
+    top_n(n = 12, wt = -avg_log2FC)
+seurat.sp.fib.mark%>%filter(p_val<=0.05)
+
+
+DoHeatmap(seurat.bulk.count.obj,features = c(rownames(seurat.sp.fib.mark%>%
+               top_n(n = 12, wt = avg_log2FC)),rownames(seurat.sp.fib.mark%>%
+                                                            top_n(n = 12, wt = -avg_log2FC))),cells = which(seurat.bulk.count.obj@active.ident%in%c("1","2")))
+```
+```{r}
+seurat.sp.fib.mark.neighb <- FindMarkers(seurat.bulk.count.obj.neighb,ident.1 = "1",ident.2 = "2")
+seurat.sp.fib.mark.neighb%>%filter(p_val<=0.05)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/seurat.recon.derm.heat.tiff", units="in", width=6, height=4.5, res=600)
+DoHeatmap(seurat.bulk.count.obj.neighb,assay = "SCT",features = c(rownames(seurat.sp.fib.mark.neighb%>%
+               top_n(n = 12, wt = avg_log2FC)),rownames(seurat.sp.fib.mark.neighb%>%
+                                                            top_n(n = 12, wt = -avg_log2FC))),group.colors = other.color[1:2],label = F)+viridis::scale_fill_viridis()
+dev.off()
+```
+
+```{r}
+a <- cbind(rownames(high.res.sp@assays$RNA@counts),(as.matrix(high.res.sp@assays$RNA@counts)))
+colnames(a) <- paste("c",colnames(a),sep = "_")
+colnames(a)[1] <- "GENES"
+write.table(a,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/expressionSC.txt",row.names = F,col.names = colnames(a),quote = F,sep = '\t')
+
+b <- cbind(rownames(low.res.sp@assays$Spatial@counts),as.matrix(low.res.sp@assays$Spatial@counts))
+colnames(b)[1] <- "GENES"
+write.table(b,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/expressionST.txt",row.names = F,col.names = colnames(b),quote = F,sep = '\t')
+
+write.table(data.frame(SpotID=colnames(low.res.sp),row=low.res.sp@images$slice1@coordinates$imagerow,col=low.res.sp@images$slice1@coordinates$imagecol),"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/coordinateST.txt",quote = F,row.names = F,sep = '\t')
+
+write.table(data.frame(Cell_IDs=paste("c",colnames((as.matrix(high.res.sp@assays$RNA@counts))),sep = "_"),CellType=as.character(high.res.sp$celltype)),"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/celltypeSC.txt",quote = F,row.names = F,sep = '\t')
+
+### cytospace -sp expressionSC.txt -ctp celltypeSC.txt -stp expressionST.txt -cp coordinateST.txt -o cytospace_results -sm lap_CSPR
+
+
+
+cytospace <- read.csv("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/cytospace_results/assigned_locations.csv")
+cytospace$OriginalCID <- unlist(lapply(strsplit(cytospace$OriginalCID,split = "_"),function(x) x[2]))
+a <- lapply(unique(cytospace$OriginalCID),function(x){
+  if(length(unique(cytospace[which(cytospace$OriginalCID%in%x),"row"]))+length(unique(cytospace[which(cytospace$OriginalCID%in%x),"col"]))==2){
+    c(unique(cytospace[which(cytospace$OriginalCID%in%x),"row"]),unique(cytospace[which(cytospace$OriginalCID%in%x),"col"]))
+  }else{
+    NULL
+  }
+})
+
+names(a) <- unique(cytospace$OriginalCID)
+
+
+cyto.mapped <-unique(cytospace$OriginalCID)[-which(unique(cytospace$OriginalCID)%in%names(which(unlist(lapply(a,is.null)))))]
+cyto.coord <- lapply(cyto.mapped,function(x){
+  if(length(unique(cytospace[which(cytospace$OriginalCID%in%x),"row"]))+length(unique(cytospace[which(cytospace$OriginalCID%in%x),"col"]))==2){
+    c(unique(cytospace[which(cytospace$OriginalCID%in%x),"row"]),unique(cytospace[which(cytospace$OriginalCID%in%x),"col"]))
+  }else{
+    NULL
+  }
+})
+cyto.coord <- matrix(unlist(cyto.coord),ncol = 2,byrow = T)
+rownames(cyto.coord) <- cyto.mapped
+colnames(cyto.coord) <- c("row","col")
+high.res.sp.cyto <- subset(high.res.sp,cells = cyto.mapped)
+
+set.seed(60611)
+rand <- matrix(runif(nrow(cyto.coord)*ncol(cyto.coord))-.5,ncol = 2)*100
+cyto.coord <- cyto.coord+rand
+high.res.sp.cyto[["row"]] <- cyto.coord[,"row"]
+high.res.sp.cyto[["col"]] <- cyto.coord[,"col"]
+
+
+
+
+dataf<- data.frame(row=high.res.sp.cyto[["row"]]$row , col=high.res.sp.cyto[["col"]]$col,celltype=high.res.sp.cyto$celltype)
+dataf$celltype <- factor(dataf$celltype,levels = stringr::str_sort(unique(as.character(dataf$celltype)),numeric = T))
+library(ggplot2)
+ggplot(dataf,aes(x=col,y=-row,color=celltype))+geom_jitter()+theme_classic() 
+
+```
+
+```{r}
+findSpatialNeighborhood_bench<-function (seurat.obj,orig.seurat,dist.mat, annotationToUse = "celltype", query.cluster, orig.assay = "RNA", nDims = 10, resolution = 0.2, pal = "Paired",  nNeighborhood = NULL, seed = 60611) 
+{
+  
+  dist <- dist.mat
+  orig.seurat <- subset(orig.seurat,cells=unlist(lapply(colnames(seurat.obj),function(x){paste(unlist(strsplit(x,"[.]")),collapse = "-") })))
+  
+  bulk.count <- apply(dist, 1, function(x) {
+    neighbor <- which(x<=sort(x)[30])
+    rowSums(orig.seurat@assays[[orig.assay]]@counts[,  neighbor])
+  })
+  #return(bulk.count)
+  colnames(bulk.count) <- colnames(seurat.obj)
+  bulk.count <- as(bulk.count, "sparseMatrix")
+  ind <- which(seurat.obj[[annotationToUse]][[1]] %in% 
+                 query.cluster)
+  bulk.count.sub <- bulk.count[, ind]
+  bulk.count.obj <- Seurat::CreateSeuratObject(bulk.count.sub,   verbose = FALSE)
+  bulk.count.obj <- Seurat::SCTransform(bulk.count.obj, verbose = FALSE)
+  bulk.count.obj <- Seurat::RunPCA(bulk.count.obj, verbose = FALSE)
+  bulk.count.obj <- Seurat::FindNeighbors(bulk.count.obj, dims = 1:nDims, 
+                                          verbose = FALSE)
+  bulk.count.obj <- Seurat::FindClusters(bulk.count.obj, verbose = FALSE, 
+                                         resolution = resolution)
+  set.seed(seed)
+  if (is.null(nNeighborhood) == F) {
+    sil_width <- purrr::map_dbl(2:10, function(k) {
+      model <- cluster::pam(x =  high.res.sp.cyto@meta.data[ind,c("row","col")], k = k)
+      model$silinfo$avg.width
+    })
+    show((2:10)[which.max(sil_width)])
+    bulk.count.obj$kmean.cluster <- factor(kmeans(x = bulk.count.obj@reductions[["pca"]]@cell.embeddings,  centers = nNeighborhood, nstart = 100)$cluster)
+    bulk.count.obj <- SetIdent(bulk.count.obj, value = "kmean.cluster")
+  }
+  bulk.count.obj <- Seurat::RunUMAP(bulk.count.obj, dims = 1:nDims, 
+                                    verbose = FALSE)
+  
+  seurat.obj$spatial.neighborhood <- as.character(seurat.obj[[annotationToUse]][[1]])
+  seurat.obj$spatial.neighborhood[colnames(bulk.count.obj)] <- as.character(bulk.count.obj@active.ident)
+  
+ list(seurat.obj,bulk.count.obj)
+}
+cyto <- as.matrix(dist(high.res.sp.cyto@meta.data[,c("row","col")]))
+
+
+
+cyto.bulk.count.obj <- findSpatialNeighborhood_bench(seurat.obj = high.res.sp.cyto,orig.seurat = high.res.sp,dist.mat = cyto,query.cluster = "Dermal",nNeighborhood = 2)
+
+cyto.bulk.count.obj.neighb <- cyto.bulk.count.obj[[2]]
+cyto.bulk.count.obj <- cyto.bulk.count.obj[[1]]
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/cyto.recon.tiff", units="in", width=4.5, height=4.5, res=600)
+ggplot(cyto.bulk.count.obj@meta.data)+geom_point(aes(x=col,y=-row,color=spatial.neighborhood),size=1)+theme_void()+scale_color_manual(values = other.color)+NoLegend()
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/cyto.recon.derm.tiff", units="in", width=4.5, height=4.5, res=600)
+ggplot(cyto.bulk.count.obj@meta.data[which(cyto.bulk.count.obj@meta.data$spatial.neighborhood%in%c(1,2)),])+geom_point(aes(x=col,y=-row,color=spatial.neighborhood),size=1)+theme_void()+scale_color_manual(values = other.color)+NoLegend()
+dev.off()
+
+#plot_ly(cyto.bulk.count.obj@meta.data,x=~col,y=~-row,color=~spatial.neighborhood,colors = "Paired", marker = list(size = 3))%>% add_markers()
+```
+
+```{r}
+cyto.bulk.count.obj <- SetIdent(cyto.bulk.count.obj, value = "spatial.neighborhood")
+cyto.sp.fib.mark <- FindMarkers(cyto.bulk.count.obj,ident.1 = "1",ident.2 = "2")
+
+
+
+cyto.sp.fib.mark%>%
+    top_n(n = 12, wt = avg_log2FC)
+cyto.sp.fib.mark%>%
+    top_n(n = 12, wt = -avg_log2FC)
+cyto.sp.fib.mark%>%filter(p_val<=0.05)
+
+
+
+DoHeatmap(cyto.bulk.count.obj,features = c(rownames(cyto.sp.fib.mark%>%
+               top_n(n = 12, wt = avg_log2FC)),rownames(cyto.sp.fib.mark%>%
+                                                            top_n(n = 12, wt = -avg_log2FC))),cells = which(cyto.bulk.count.obj@active.ident%in%c("1","2")))
+```
+```{r}
+cyto.sp.fib.mark.neighb <- FindMarkers(cyto.bulk.count.obj.neighb,ident.1 = "1",ident.2 = "2")
+cyto.sp.fib.mark.neighb%>%filter(p_val<=0.05)
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/cyto.recon.derm.heat.tiff", units="in", width=6, height=4.5, res=600)
+DoHeatmap(cyto.bulk.count.obj.neighb,assay = "SCT",features = c(rownames(cyto.sp.fib.mark.neighb%>%
+               top_n(n = 10, wt = avg_log2FC)),rownames(cyto.sp.fib.mark.neighb%>%
+                                                            top_n(n = 10, wt = -avg_log2FC))),group.colors = other.color[1:2],label = F)+viridis::scale_fill_viridis()
+dev.off()
+```
+
+
+```{r}
+library(Seurat)
+library(SeuratDisk)
+
+FS.loom <- as.loom(low.res.sp2,filename = "~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/FS.loom")
+FS.loom$close_all()
+
+```
+
+```{r}
+
+library(Seurat)
+Tangram.rslt <- read.csv("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Tangram.rslt.txt", header=FALSE)
+Tangram.rslt <- as.matrix(Tangram.rslt)
+
+
+low.res.sp[["test"]] <- (Tangram.rslt[3,])
+SpatialFeaturePlot(low.res.sp,"test")
+
+
+apply(Tangram.rslt,1,which.max)
+
+
+set.seed(60611)
+rand <- matrix(runif(8000*2)-.5,ncol = 2)*100
+
+
+tangram.pre <- low.res.sp@images$slice1@coordinates[apply(Tangram.rslt,1,which.max),c("imagerow","imagecol")]+rand
+low.res.sp2[["tangram.pre.x"]] <- tangram.pre[,1]
+low.res.sp2[["tangram.pre.y"]] <- tangram.pre[,2]
+low.res.sp2[["tangram.conf"]] <- apply(Tangram.rslt,1,max)
+
+
+dataf<- data.frame(row=low.res.sp2[["tangram.pre.x"]]$tangram.pre.x, col=low.res.sp2[["tangram.pre.y"]]$tangram.pre.y,celltype=low.res.sp2$celltype,prob=low.res.sp2$tangram.conf)
+dataf$celltype <- factor(dataf$celltype,levels = stringr::str_sort(unique(as.character(dataf$celltype)),numeric = T))
+library(ggplot2)
+ggplot(dataf,aes(x=col,y=-row,color=celltype))+geom_point()+theme_classic() 
+
+ggplot(dataf,aes(x=col,y=-row,color=prob))+geom_point()+theme_classic() +viridis::scale_color_viridis()
+#################
+```
+
+```{r}
+findSpatialNeighborhood_bench<-function (seurat.obj,orig.seurat,dist.mat, annotationToUse = "celltype", query.cluster, orig.assay = "RNA", nDims = 10, resolution = 0.2, pal = "Paired",  nNeighborhood = NULL, seed = 60611) 
+{
+  
+  dist <- dist.mat
+  orig.seurat <- subset(orig.seurat,cells=unlist(lapply(colnames(seurat.obj),function(x){paste(unlist(strsplit(x,"[.]")),collapse = "-") })))
+  
+  bulk.count <- apply(dist, 1, function(x) {
+    neighbor <- which(x<=sort(x)[30])
+    rowSums(orig.seurat@assays[[orig.assay]]@counts[,  neighbor])
+  })
+  #return(bulk.count)
+  colnames(bulk.count) <- colnames(seurat.obj)
+  bulk.count <- as(bulk.count, "sparseMatrix")
+  ind <- which(seurat.obj[[annotationToUse]][[1]] %in% 
+                 query.cluster)
+  bulk.count.sub <- bulk.count[, ind]
+  bulk.count.obj <- Seurat::CreateSeuratObject(bulk.count.sub,   verbose = FALSE)
+  bulk.count.obj <- Seurat::SCTransform(bulk.count.obj, verbose = FALSE)
+  bulk.count.obj <- Seurat::RunPCA(bulk.count.obj, verbose = FALSE)
+  bulk.count.obj <- Seurat::FindNeighbors(bulk.count.obj, dims = 1:nDims, 
+                                          verbose = FALSE)
+  bulk.count.obj <- Seurat::FindClusters(bulk.count.obj, verbose = FALSE, 
+                                         resolution = resolution)
+  set.seed(seed)
+  if (is.null(nNeighborhood) == F) {
+    sil_width <- purrr::map_dbl(2:10, function(k) {
+      model <- cluster::pam(x =  low.res.sp2@meta.data[ind,c("tangram.pre.x","tangram.pre.y")], k = k)
+      model$silinfo$avg.width
+    })
+    show((2:10)[which.max(sil_width)])
+    bulk.count.obj$kmean.cluster <- factor(kmeans(x = bulk.count.obj@reductions[["pca"]]@cell.embeddings,  centers = nNeighborhood, nstart = 100)$cluster)
+    bulk.count.obj <- SetIdent(bulk.count.obj, value = "kmean.cluster")
+  }
+  bulk.count.obj <- Seurat::RunUMAP(bulk.count.obj, dims = 1:nDims, 
+                                    verbose = FALSE)
+  
+  seurat.obj$spatial.neighborhood <- as.character(seurat.obj[[annotationToUse]][[1]])
+  seurat.obj$spatial.neighborhood[colnames(bulk.count.obj)] <- as.character(bulk.count.obj@active.ident)
+  
+  list(seurat.obj,bulk.count.obj)
+}
+tangram <- as.matrix(dist(low.res.sp2@meta.data[,c("tangram.pre.x","tangram.pre.y")]))
+
+tangram.bulk.count.obj <- findSpatialNeighborhood_bench(seurat.obj = low.res.sp2,orig.seurat = high.res.sp,dist.mat = tangram,query.cluster = "Dermal",nNeighborhood = 2)
+
+tangram.bulk.count.obj.neighb <- tangram.bulk.count.obj[[2]]
+tangram.bulk.count.obj <- tangram.bulk.count.obj[[1]]
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/tangram.recon.tiff", units="in", width=4.5, height=4.5, res=600)
+ggplot(tangram.bulk.count.obj@meta.data)+geom_point(aes(x=tangram.pre.y,y=-tangram.pre.x,color=spatial.neighborhood),size=1)+theme_void()+scale_color_manual(values = other.color)+NoLegend()
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/tangram.recon.derm.tiff", units="in", width=4.5, height=4.5, res=600)
+ggplot(tangram.bulk.count.obj@meta.data[which(tangram.bulk.count.obj@meta.data$spatial.neighborhood%in%c(1,2)),])+geom_point(aes(x=tangram.pre.y,y=-tangram.pre.x,color=spatial.neighborhood),size=1)+theme_void()+scale_color_manual(values = other.color)+NoLegend()
+dev.off()
+#plot_ly(tangram.bulk.count.obj@meta.data,x=~tangram.pre.y,y=~-tangram.pre.x,color=~spatial.neighborhood,colors = "Paired", marker = list(size = 3))%>% add_markers()
+```
+
+```{r}
+tangram.bulk.count.obj <- SetIdent(tangram.bulk.count.obj, value = "spatial.neighborhood")
+tangram.sp.fib.mark <- FindMarkers(tangram.bulk.count.obj,ident.1 = "1",ident.2 = "2")
+
+
+
+tangram.sp.fib.mark%>%
+    top_n(n = 12, wt = avg_log2FC)
+tangram.sp.fib.mark%>%
+    top_n(n = 12, wt = -avg_log2FC)
+tangram.sp.fib.mark%>%filter(p_val<=0.05)
+
+DoHeatmap(tangram.bulk.count.obj,features = c(rownames(tangram.sp.fib.mark%>%
+               top_n(n = 12, wt = avg_log2FC)),rownames(tangram.sp.fib.mark%>%
+                                                            top_n(n = 12, wt = -avg_log2FC))),cells = which(tangram.bulk.count.obj@active.ident%in%c("1","2")))
+```
+
+```{r}
+tangram.sp.fib.mark.neighb <- FindMarkers(tangram.bulk.count.obj.neighb,ident.1 = "1",ident.2 = "2")
+tangram.sp.fib.mark.neighb%>%filter(p_val<=0.05)
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/tangram.recon.derm.heat.tiff", units="in", width=6, height=4.5, res=600)
+DoHeatmap(tangram.bulk.count.obj.neighb,assay = "SCT",features = c(rownames(tangram.sp.fib.mark.neighb%>%
+               top_n(n = 10, wt = avg_log2FC)),rownames(tangram.sp.fib.mark.neighb%>%
+                                                            top_n(n = 10, wt = -avg_log2FC))),group.colors = other.color[1:2],label = F)+viridis::scale_fill_viridis()
+dev.off()
+```
+
+
+

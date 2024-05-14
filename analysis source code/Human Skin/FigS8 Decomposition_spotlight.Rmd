@@ -1,0 +1,158 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2)
+library(SPOTlight)
+library(Seurat)
+```
+
+
+```{r}
+low.res.sp <- readRDS("/projects/b1042/YiLab/Cady/Code_3rdDraft/Human Skin/low.res.sp.sk.rds")
+high.res.sp<- readRDS("/projects/b1042/YiLab/Cady/Code_3rdDraft/Human Skin/high.res.sp.sk.rds")
+```
+
+```{r}
+high.res.sp$celltype<-as.character(high.res.sp$seurat_clusters)
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("2","6","8"))]<-"Suprabasal"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("3","10","17"))]<-"Basal"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("5"))]<-"Melanocyte"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("0","1","16","7"))]<-"Dermal"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("9","11"))]<-"Endothelial"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("15","18"))]<-"Immune"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("12"))]<-"Schwann"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("14"))]<-"Smooth Muscle"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("4"))]<-"Glandular Epithelium"
+high.res.sp$celltype[which(high.res.sp$celltype%in%c("13"))]<-"Lymphatic Endothelial"
+high.res.sp$celltype<-as.factor(high.res.sp$celltype)
+
+DimPlot(high.res.sp,group.by = "celltype")
+```
+
+```{r}
+low.res.sp <- SCTransform(low.res.sp,assay = "Spatial")
+low.res.sp <- RunPCA(low.res.sp, features = VariableFeatures(low.res.sp))
+```
+
+```{r}
+Seurat::Idents(object = high.res.sp) <- high.res.sp@meta.data$celltype
+cluster_markers_all <- Seurat::FindAllMarkers(object = high.res.sp, assay = "SCT",slot = "data",verbose = TRUE, only.pos = TRUE)
+```
+
+
+```{r}
+set.seed(60611)
+
+spotlight_ls <- SPOTlight(
+
+x = high.res.sp, # Seurat Object for scRNA-Seq
+y = low.res.sp@assays$Spatial@counts, # spatail counts
+groups = as.character(high.res.sp$celltype), # annotation of scRNA-Seq
+mgs = cluster_markers_all, # result from FindAllmarkers
+hvg = 2000,
+weight_id = "avg_log2FC", # weights (e.g., logFC, -log(p-value))
+group_id = "cluster", # group labels
+gene_id = "gene") # gene identifiers
+
+saveRDS(object = spotlight_ls, "/projects/b1042/YiLab/Cady/Code_3rdDraft/Human Skin/spotlight_ls.rds")
+```
+
+```{r}
+mat <- spotlight_ls$mat
+ct <- colnames(mat)
+#mat[mat < 0.1] <- 0
+
+# Define color palette
+# (here we use 'paletteMartin' from the 'colorBlindness' package)
+paletteMartin <- c("#A6CEE3","#79C360", "#3F8EAA",  "#B89B74", "#E52829", "#FDB762", "#ED8F47", "#9471B4" ,"#DDD399" ,"#B15928")
+
+pal <- colorRampPalette(paletteMartin)(length(ct))
+names(pal) <- ct
+
+plotSpatialScatterpie(
+    x = low.res.sp,
+    y = mat,
+    cell_types = colnames(mat),
+    img = FALSE,
+    scatterpie_alpha = 1,
+    pie_scale = 0.4,) +
+    scale_fill_manual(
+        values = pal,
+        breaks = names(pal))+ggplot2::scale_y_reverse()+Seurat::NoLegend()
+```
+
+
+```{r}
+sub <- subset(low.res.sp,cells= (which(spotlight_ls$mat[,"Dermal"]>.15)))
+SpatialDimPlot(sub)+Seurat::NoLegend()
+```
+
+```{r}
+
+# find neighbors based on tissue position
+coords <- GetTissueCoordinates(sub)
+cells <- rownames(coords)
+coords <- as.matrix(coords)
+neighbors <- FindNeighbors(coords, k.param = 30)
+neighbors$nn <- neighbors$nn[cells, cells]
+
+# build cell x cell type matrix
+# ct.mtx <- matrix(
+#   data = 0,
+#   nrow = length(cells),
+#   ncol = length(unlist(unique(sub$predicted.id)))
+# )
+# rownames(ct.mtx) <- cells
+# colnames(ct.mtx) <- unique(sub$predicted.id)
+# cts <- sub$predicted.id
+# for (i in 1:length(cells)) {
+#   ct <- as.character(cts[cells[i]])
+#   ct.mtx[cells[i], ct] <- 1
+# }
+
+ct.mtx <- spotlight_ls$mat[which(spotlight_ls$mat[,"Dermal"]>.15),]
+
+# create niche assay
+sum.mtx <- as.matrix(neighbors$nn %*% ct.mtx)
+niche.assay <- CreateAssayObject(counts = t(sum.mtx))
+sub[["niche"]] <- niche.assay
+DefaultAssay(sub) <- "niche"
+
+# cluster niches assay
+sub <- ScaleData(sub)
+results <- kmeans(
+  x = t(sub[["niche"]]@scale.data),
+  centers = 4,
+  nstart = 30
+)
+sub$niches <- results[["cluster"]]
+
+SpatialDimPlot(sub, group.by = "niches")
+
+```
+```{r}
+colMeans(ct.mtx[which(sub$niches==1),])
+colMeans(ct.mtx[which(sub$niches==2),])
+colMeans(ct.mtx[which(sub$niches==3),])
+colMeans(ct.mtx[which(sub$niches==4),])
+```
+```{r}
+sub$niches <- factor(sub$niches, levels = sort(unique(sub$niches)))
+sub <- SetIdent(sub,value = "niches")
+derm.sub.mark <- FindAllMarkers(object = sub,  assay = "SCT",slot = "data",verbose = TRUE,  only.pos = TRUE)
+derm.sub.mark%>%
+    group_by(cluster) %>%
+    slice_head(n = 10) -> top10
+top10
+```
+```{r}
+DefaultAssay(sub) <- "SCT"
+DoHeatmap(sub,features = top10$gene)+viridis::scale_fill_viridis()
+```
+
+
+
+
