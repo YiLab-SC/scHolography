@@ -1,0 +1,390 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(Seurat)
+vizgen.obj <- LoadVizgen(data.dir = "~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_Post1stReview/Data/Vizgen MERFISH Mouse/s2r1/", fov = "s2r1")
+dim(vizgen.obj)
+
+
+vizgen.obj <- SCTransform(vizgen.obj, assay = "Vizgen", clip.range = c(-10, 10))
+vizgen.obj <- RunPCA(vizgen.obj,features = rownames(vizgen.obj))
+vizgen.obj <- RunUMAP(vizgen.obj, dims = 1:30)
+vizgen.obj <- FindNeighbors(vizgen.obj, reduction = "pca", dims = 1:30)
+vizgen.obj <- FindClusters(vizgen.obj, resolution = 0.3)
+
+```
+
+```{r}
+DimPlot(vizgen.obj, reduction = "umap")
+ImageDimPlot(vizgen.obj, fov = "s2r1", cols = "polychrome", axes = TRUE)
+```
+
+```{r}
+set.seed(60611)
+sub.ind <- sample(1:ncol(vizgen.obj),8000)
+vizgen.obj.sub <- subset(vizgen.obj, cells = sub.ind)
+length(unique(vizgen.obj.sub$seurat_clusters))
+DimPlot(vizgen.obj.sub, reduction = "umap")
+ImageDimPlot(vizgen.obj.sub, fov = "s2r1", cols = "polychrome", axes = TRUE)
+```
+
+
+```{r}
+ref <- readRDS("~/Downloads/mouse_hippocampus_reference.rds")
+ref$celltype <- factor(as.character(ref$celltype),levels = stringr::str_sort(unique(as.character(ref$celltype)),numeric = T))
+DimPlot(ref,group.by = "celltype")
+
+rownames(vizgen.obj.sub@assays$Vizgen@counts)<-toupper(rownames(vizgen.obj.sub@assays$Vizgen@counts))
+rownames(vizgen.obj.sub@assays$Vizgen@data)<-toupper(rownames(vizgen.obj.sub@assays$Vizgen@data))
+vizgen.obj.sub <-SCTransform(vizgen.obj.sub,assay = "Vizgen")
+```
+
+
+```{r}
+anchors <- FindTransferAnchors(reference = ref, query = vizgen.obj.sub, normalization.method = "SCT",npcs = 50)
+predictions.assay <- TransferData(anchorset = anchors, refdata = ref$celltype, prediction.assay = TRUE,weight.reduction = vizgen.obj.sub[["pca"]], dims = 1:50)
+vizgen.obj.sub[["predictions"]] <- predictions.assay
+```
+
+
+```{r}
+vizgen.hippo.ind <-intersect(intersect(which(GetTissueCoordinates(vizgen.obj)$x>3000),which(GetTissueCoordinates(vizgen.obj)$x<=7000)),intersect(which(GetTissueCoordinates(vizgen.obj)$y>1000),which(GetTissueCoordinates(vizgen.obj)$y<=4000)))
+
+set.seed(60611)
+vizgen.hippo <- subset(vizgen.obj,cells = sample(GetTissueCoordinates(vizgen.obj)$cell[vizgen.hippo.ind],8000))
+
+ImageDimPlot(vizgen.hippo, fov = "s2r1", cols = "polychrome", axes = TRUE)
+```
+```{r}
+rownames(vizgen.hippo@assays$Vizgen@counts)<-toupper(rownames(vizgen.hippo@assays$Vizgen@counts))
+rownames(vizgen.hippo@assays$Vizgen@data)<-toupper(rownames(vizgen.hippo@assays$Vizgen@data))
+vizgen.hippo <-SCTransform(vizgen.hippo,assay = "Vizgen")
+```
+
+
+```{r}
+# Identify anchors
+transfer.anchors <- FindTransferAnchors(reference = ref, query = vizgen.hippo,  normalization.method = "SCT",npcs = 50)
+genes.use <- VariableFeatures(ref)
+refdata <- GetAssayData(ref, assay = "RNA", slot = "counts")[genes.use, ]
+imputation <- TransferData(anchorset = transfer.anchors, refdata = refdata, weight.reduction = vizgen.hippo[["pca"]],
+                           dims = 1:50)
+vizgen.hippo[["RNA"]] <- imputation
+vizgen.hippo@assays$RNA@counts <-round(vizgen.hippo@assays$RNA@data)
+vizgen.hippo@assays$RNA@data <- vizgen.hippo@assays$RNA@counts 
+
+
+vizgen.hippo@assays$SCT <- NULL
+DefaultAssay(vizgen.hippo) <- "RNA"
+vizgen.hippo <-SCTransform(vizgen.hippo,assay = "RNA")
+
+
+vizgen.hippo <- RunPCA(vizgen.hippo,features = rownames(vizgen.hippo))
+vizgen.hippo <- RunUMAP(vizgen.hippo, dims = 1:30)
+vizgen.hippo <- FindNeighbors(vizgen.hippo, reduction = "pca", dims = 1:30)
+vizgen.hippo <- FindClusters(vizgen.hippo, resolution = 0.3)
+DimPlot(vizgen.hippo, reduction = "umap")
+ImageDimPlot(vizgen.hippo, fov = "s2r1", cols = "polychrome", axes = TRUE)
+```
+```{r}
+transfer.anchors <- FindTransferAnchors(reference = ref, query = vizgen.hippo,  normalization.method = "SCT",npcs = 50)
+predictions <- TransferData(anchorset = transfer.anchors, refdata = ref$celltype,
+                            dims = 1:30)
+vizgen.hippo <- AddMetaData(vizgen.hippo, metadata = predictions)
+```
+
+```{r}
+DimPlot(vizgen.hippo, reduction = "umap",group.by = "predicted.id")
+ImageDimPlot(vizgen.hippo, fov = "s2r1", cols = "polychrome", axes = TRUE,group.by = "predicted.id")
+ImageDimPlot(vizgen.hippo, fov = "s2r1", cols = "polychrome", axes = TRUE,cells  = colnames(vizgen.hippo)[which(vizgen.hippo$predicted.id%in%c("CA1 Principal cells","CA3 Principal cells"))],group.by = "predicted.id")
+```
+```{r}
+visium <- Load10X_Spatial("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/Visium/")
+rownames(visium@assays$Spatial@data) <- toupper(rownames(visium@assays$Spatial@data))
+rownames(visium@assays$Spatial@counts) <- toupper(rownames(visium@assays$Spatial@counts))
+visium <- SCTransform(visium,assay = "Spatial")
+visium <- RunPCA(visium,assay = "SCT")
+visium <- FindNeighbors(visium, reduction = "pca")
+visium <- FindClusters(visium, verbose = FALSE)
+visium <- RunUMAP(visium, reduction = "pca", dims = 1:30)
+DimPlot(visium)
+SpatialDimPlot(visium,label = T)
+```
+```{r}
+sp.integrated<- dataAlign(low.res.sp =  visium,high.res.sp =  vizgen.hippo,stProcessed = T,scProcessed = T,future.size = 7000)
+hippo.vizgen.visium<-trainHolography(sp.integrated,n.repeat = 30,fov = "s2r1",which.fov = 2)
+hippo.vizgen.visium <- readRDS("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen/hippo.vizgen.visium.rds")
+```
+
+```{r}
+DimPlot(sp.integrated,group.by = "type.assay")
+scHolographyPlot(hippo.vizgen.visium,color.by = "predicted.id")
+```
+
+
+```{r}
+library(CellTrek)
+library(Seurat)
+
+
+low.res.sp2 <-vizgen.hippo
+low.res.sp<-visium
+
+low.res.sp2 <- RenameCells(low.res.sp2, new.names=make.names(Cells(low.res.sp2)))
+low.res.sp <- RenameCells(low.res.sp, new.names=make.names(Cells(low.res.sp)))
+stsc_traint <- CellTrek::traint(st_data=low.res.sp, sc_data=low.res.sp2, sc_assay='SCT', cell_names='seurat_clusters',norm = "SCT")
+
+stsc_celltrek <- CellTrek::celltrek(st_sc_int=stsc_traint, int_assay='traint', sc_data=low.res.sp2, sc_assay = 'SCT', reduction='pca', intp=T, intp_pnt=2000, intp_lin=F, nPCs=30, ntree=1000, dist_thresh=999, top_spot=1, spot_n=100, repel_r=20, repel_iter=20, keep_model=T)$celltrek
+
+stsc_celltrek$celltype <- factor(stsc_celltrek$celltype, levels = sort(unique(as.character(stsc_celltrek$celltype))))
+DimPlot(stsc_celltrek,reduction = "celltrek",group.by = "predicted.id")
+
+saveRDS(stsc_celltrek,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen/stsc_celltrek.rds")
+```
+
+
+
+```{r}
+anchors <- FindTransferAnchors(reference = low.res.sp, query = low.res.sp2, normalization.method = "SCT")
+predictions.assay <- TransferData(anchorset = anchors, refdata = t(low.res.sp@images[[1]]@coordinates[,c("imagecol","imagerow")]),dims = 1:30 )
+
+low.res.sp2[["predicted.row"]]<-as.vector(predictions.assay[2,])
+
+low.res.sp2[["predicted.col"]]<-as.vector(predictions.assay[1,])
+dataf<- data.frame(row=low.res.sp2[["predicted.row"]]$predicted.row, col=low.res.sp2[["predicted.col"]]$predicted.col,celltype=low.res.sp2$predicted.id)
+dataf$celltype <- factor(dataf$celltype,levels = stringr::str_sort(unique(as.character(dataf$celltype)),numeric = T))
+library(ggplot2)
+ggplot(dataf,aes(x=col,y=-row,color=celltype))+geom_jitter()+theme_classic() +
+  xlim(6000, 20000)+
+  ylim(-24000, -8000)
+
+
+```
+
+
+
+```{r}
+
+a <- cbind(rownames(vizgen.hippo@assays$RNA@counts),(as.matrix(vizgen.hippo@assays$RNA@counts)))
+colnames(a) <- paste("c",colnames(a),sep = "_")
+colnames(a)[1] <- "GENES"
+write.table(a,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen//expressionSC.txt",row.names = F,col.names = colnames(a),quote = F,sep = '\t')
+
+b <- cbind(rownames(visium@assays$Spatial@counts),as.matrix(visium@assays$Spatial@counts))
+colnames(b)[1] <- "GENES"
+write.table(b,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen//expressionST.txt",row.names = F,col.names = colnames(b),quote = F,sep = '\t')
+
+write.table(data.frame(SpotID=colnames(visium),row=visium@images$slice1@coordinates$imagerow,col=visium@images$slice1@coordinates$imagecol),"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen//coordinateST.txt",quote = F,row.names = F,sep = '\t')
+
+write.table(data.frame(Cell_IDs=paste("c",colnames((as.matrix(vizgen.hippo@assays$RNA@counts))),sep = "_"),CellType=as.character(vizgen.hippo$seurat_clusters)),"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen//celltypeSC.txt",quote = F,row.names = F,sep = '\t')
+
+### cytospace -sp expressionSC.txt -ctp celltypeSC.txt -stp expressionST.txt -cp coordinateST.txt -o cytospace_results -sm lap_CSPR
+
+cytospace <- read.csv("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen/cytospace_results/assigned_locations.csv")
+cytospace$OriginalCID <- unlist(lapply(strsplit(cytospace$OriginalCID,split = "_"),function(x) x[2]))
+a <- lapply(unique(cytospace$OriginalCID),function(x){
+  if(length(unique(cytospace[which(cytospace$OriginalCID%in%x),"row"]))+length(unique(cytospace[which(cytospace$OriginalCID%in%x),"col"]))==2){
+    c(unique(cytospace[which(cytospace$OriginalCID%in%x),"row"]),unique(cytospace[which(cytospace$OriginalCID%in%x),"col"]))
+  }else{
+    c(mean(cytospace[which(cytospace$OriginalCID%in%x),"row"]),mean(cytospace[which(cytospace$OriginalCID%in%x),"col"]))
+  }
+})
+
+names(a) <- unique(cytospace$OriginalCID)
+
+
+cyto.mapped <-unique(cytospace$OriginalCID)
+cyto.coord <- lapply(cyto.mapped,function(x){
+  if(length(unique(cytospace[which(cytospace$OriginalCID%in%x),"row"]))+length(unique(cytospace[which(cytospace$OriginalCID%in%x),"col"]))==2){
+    c(unique(cytospace[which(cytospace$OriginalCID%in%x),"row"]),unique(cytospace[which(cytospace$OriginalCID%in%x),"col"]))
+  }else{
+    c(mean(cytospace[which(cytospace$OriginalCID%in%x),"row"]),mean(cytospace[which(cytospace$OriginalCID%in%x),"col"]))
+  }
+})
+cyto.coord <- matrix(unlist(cyto.coord),ncol = 2,byrow = T)
+rownames(cyto.coord) <- cyto.mapped
+colnames(cyto.coord) <- c("row","col")
+vizgen.hippo.cyto <- subset(vizgen.hippo,cells = cyto.mapped)
+
+
+set.seed(60611)
+rand <- matrix(runif(nrow(cyto.coord)*ncol(cyto.coord))-.5,ncol = 2)*100
+cyto.coord <- cyto.coord+rand
+
+
+vizgen.hippo.cyto[["row"]] <- cyto.coord[,"row"]
+vizgen.hippo.cyto[["col"]] <- cyto.coord[,"col"]
+
+
+
+
+dataf<- data.frame(row=vizgen.hippo.cyto[["row"]]$row , col=vizgen.hippo.cyto[["col"]]$col,celltype=vizgen.hippo.cyto$predicted.id)
+dataf$celltype <- factor(dataf$celltype,levels = stringr::str_sort(unique(as.character(dataf$celltype)),numeric = T))
+library(ggplot2)
+ggplot(dataf,aes(x=col,y=-row,color=celltype))+geom_point()+theme_classic() 
+
+```
+
+```{r}
+Tangram.rslt <- read.csv("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen//Tangram.rslt.txt", header=FALSE)
+Tangram.rslt <- as.matrix(Tangram.rslt)
+set.seed(60611)
+rand <- matrix(runif(8000*2)-.5,ncol = 2)*100
+
+
+tangram.pre <- visium@images$slice1@coordinates[apply(Tangram.rslt,1,which.max),c("imagerow","imagecol")]+rand
+vizgen.hippo[["tangram.pre.x"]] <- tangram.pre[,1]
+vizgen.hippo[["tangram.pre.y"]] <- tangram.pre[,2]
+vizgen.hippo[["tangram.conf"]] <- apply(Tangram.rslt,1,max)
+
+
+dataf<- data.frame(row=vizgen.hippo[["tangram.pre.x"]]$tangram.pre.x, col=vizgen.hippo[["tangram.pre.y"]]$tangram.pre.y,celltype=vizgen.hippo$predicted.id,prob=vizgen.hippo$tangram.conf)
+dataf$celltype <- factor(dataf$celltype,levels = stringr::str_sort(unique(as.character(dataf$celltype)),numeric = T))
+library(ggplot2)
+ggplot(dataf,aes(x=col,y=-row,color=celltype))+geom_point()+theme_classic() 
+```
+
+
+```{r}
+real <- as.matrix(dist(GetTissueCoordinates(vizgen.hippo)[,c("x","y")]))
+colnames(real) <- colnames(vizgen.hippo)
+rownames(real) <- colnames(vizgen.hippo)
+```
+
+
+```{r}
+scHolo <- as.matrix(dist(hippo.vizgen.visium$scHolography.sc@meta.data[,c("z3d_sp","y3d_sp","x3d_sp")]))
+
+celltrek <- as.matrix(dist(stsc_celltrek@reductions$celltrek@cell.embeddings))
+rownames(celltrek) <- unlist(lapply(colnames(celltrek),function(x) unlist(strsplit(x,split = "X"))[2]))
+colnames(celltrek) <- unlist(lapply(colnames(celltrek),function(x) unlist(strsplit(x,split = "X"))[2]))
+
+cyto <- as.matrix(dist(vizgen.hippo.cyto@meta.data[,c("row","col")]))
+seurat <- as.matrix(dist(low.res.sp2@meta.data[,c("predicted.row","predicted.col")]))
+tangram <- as.matrix(dist(vizgen.hippo@meta.data[,c("tangram.pre.x","tangram.pre.y")]))
+
+```
+
+```{r}
+library(dplyr)
+
+
+findKL<-function(realmat,mat){
+  realmat.sub <- realmat[rownames(mat),colnames(mat)]
+  
+  out <- lapply(rownames(mat),function(nam){
+    eps <- 1e-20
+    X_ <- cbind(realmat.sub[nam,],mat[nam,])
+    X_[X_ < eps] <- eps
+    X_ <- scale(X_, center = F, scale = colSums(X_)) %>% data.frame
+    KL_D <- suppressMessages(philentropy::KL(t(X_), unit = "log"))
+    KL_D
+  })
+  out <- unlist(out)
+  names(out) <- rownames(mat)
+  out
+}
+
+scHolo.kl<-findKL(realmat =real ,mat = scHolo)
+
+celltrek.kl<-findKL(realmat =real ,mat = celltrek)
+
+cyto.kl<-findKL(realmat = real,mat = cyto)
+
+seurat.kl<-findKL(realmat = real,mat = seurat)
+
+tangram.kl<-findKL(realmat = real,mat = tangram)
+```
+
+```{r}
+library(ggpubr)
+kl <- c(scHolo.kl,celltrek.kl,cyto.kl,seurat.kl,tangram.kl)
+num.neighbor <- rep(seq(3,15,by=3),5)
+method<-c(rep("scHolography",length(scHolo.kl)),rep("CellTrek",length(celltrek.kl)),rep("CytoSPACE",length(cyto.kl)),rep("Seurat",length(seurat.kl)),rep("Tangram",length(tangram.kl)))
+df <- data.frame(kl=kl, method=factor(method,levels = (c("scHolography","CellTrek","CytoSPACE","Seurat","Tangram"))))
+
+
+my_comparisons <- list( c("scHolography","CellTrek"),c("scHolography","CytoSPACE"),c("scHolography","Seurat"), c("scHolography","Tangram"))
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/KL_Divergence.tiff", units="in", width=4.5, height=6, res=600)
+ggplot(df, aes(x=method, y=kl, fill=method)) +
+  geom_boxplot()+theme_classic()+ 
+  geom_signif(comparisons = my_comparisons,test.args = list(alternative="less",size=7),map_signif_level = TRUE,y_position = c(.8,.86667,.93333,1))+ theme(axis.title.x = element_blank(),axis.text.x = element_text(angle = 45,hjust=1),axis.title.y = element_text(size = 16,face = "bold"),axis.text = element_text(size = 15,face = "bold"))+NoLegend()+ylim(c(0,1.1))+scale_fill_brewer(palette = "Set3")+ylab("K-L Divergence")
+dev.off()
+```
+
+
+```{r}
+
+neighbor.eval2 <- function(dist.mat,max.neighbor,n.by,start){
+  bench <-real
+  expr <- low.res.sp2@assays$Vizgen@counts
+  test <- dist.mat
+  diag(bench)<-10^15
+  diag(test)<-10^15
+  
+  neighbor.comp.corr.mtx <- c()
+  for (i in seq(start+1,(max.neighbor+1),by=n.by)) {
+    
+    nn.real.ls <- lapply(colnames(dist.mat), function(x) {
+      ind <- which(bench[x,colnames(dist.mat)]<=sort(bench[x,colnames(dist.mat)])[i])
+      #show(expr[,colnames(dist.mat[,ind])])
+      rowSums(as.matrix(expr[,colnames(dist.mat[,ind])]))
+    })
+    
+    nn.ls <- lapply(colnames(dist.mat), function(x) {
+      ind <- which(test[x,colnames(dist.mat)]<=sort(test[x,colnames(dist.mat)])[i])
+      rowSums(as.matrix(expr[,colnames(dist.mat[,ind])]))
+    })
+    
+    neighbor.comp.corr <- unlist(lapply(1:length(nn.ls), function(x) {
+      lsa::cosine(nn.real.ls[[x]],nn.ls[[x]])
+    }))
+    neighbor.comp.corr.mtx <- c(neighbor.comp.corr.mtx,neighbor.comp.corr)
+    
+  }
+  
+  neighbor.comp.corr.mtx <- matrix(neighbor.comp.corr.mtx,ncol = max.neighbor/n.by)
+  (neighbor.comp.corr.mtx)
+}
+
+
+
+a.3 <- neighbor.eval2(scHolo,50,1,1)
+b.3 <- neighbor.eval2(celltrek,50,1,1)
+c.3 <- neighbor.eval2(cyto,50,1,1)
+d.3 <- neighbor.eval2(seurat,50,1,1)
+e.3 <- neighbor.eval2(tangram,50,1,1)
+
+```
+
+```{r}
+cor.mean <- c(colMeans(a.3[,c(seq(3,15,by=3)-1)]),colMeans(b.3[,c(seq(3,15,by=3)-1)]),colMeans(c.3[,c(seq(3,15,by=3)-1)]),colMeans(d.3[,c(seq(3,15,by=3)-1)]),colMeans(e.3[,c(seq(3,15,by=3)-1)]))
+
+num.neighbor <- rep(seq(3,15,by=3),5)
+method<-c(rep("scHolography",5),rep("CellTrek",5),rep("CytoSPACE",5),rep("Seurat",5),rep("Tangram",5))
+df <- data.frame(mean=cor.mean, method=factor(method,levels = rev(c("scHolography","CellTrek","CytoSPACE","Seurat","Tangram"))),num.neighbor=factor(num.neighbor,levels = stringr::str_sort(unique(num.neighbor),numeric = T)))
+
+
+library(viridis)
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//hippo.benchmark.cosine.heat.tiff", units="in", width=10, height=6, res=600)
+ggplot(df, aes(num.neighbor, method, fill= mean)) + 
+  geom_tile() +
+  scale_fill_viridis(discrete=FALSE)+theme_classic()+theme(axis.text = element_text(size = 15,face = "bold"),axis.text.x = element_text(angle = 45,hjust=1),axis.title=element_text(size = 18,face = "bold"),legend.title =element_text(size = 13,face = "bold"),legend.text =element_text(size = 12,face = "bold"))+xlab("Size of Neighborhood")+ylab("Methods")+ labs(fill="Mean of Cosine Similarity")+geom_text(aes(label = round(mean, 3)),size=7)
+dev.off()
+
+```
+
+
+```{r}
+vizgen.hippo.loom <-as.loom(vizgen.hippo,filename = "~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen/vizgen.hippo.loom")
+vizgen.hippo.loom$close_all()
+```
+
+
+
+

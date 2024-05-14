@@ -1,0 +1,142 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(scHolography)
+sp.integrated <- readRDS("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen/sp.integrated.rds")
+
+hippo.vizgen.visium1<-trainHolography(sp.integrated,n.repeat = 30,fov = "s2r1",which.fov = 2,vSeed = 1)
+save.image("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen/seed1-5.RData")
+
+hippo.vizgen.visium2<-trainHolography(sp.integrated,n.repeat = 30,fov = "s2r1",which.fov = 2,vSeed = 2)
+save.image("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen/seed1-5.RData")
+
+hippo.vizgen.visium3<-trainHolography(sp.integrated,n.repeat = 30,fov = "s2r1",which.fov = 2,vSeed = 3)
+save.image("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen/seed1-5.RData")
+
+hippo.vizgen.visium4<-trainHolography(sp.integrated,n.repeat = 30,fov = "s2r1",which.fov = 2,vSeed = 4)
+save.image("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen/seed1-5.RData")
+
+hippo.vizgen.visium5<-trainHolography(sp.integrated,n.repeat = 30,fov = "s2r1",which.fov = 2,vSeed = 5)
+save.image("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen/seed1-5.RData")
+```
+
+```{r}
+vizgen.hippo <- subset(sp.integrated,cells = which(sp.integrated$type.assay%in%"sc"))
+real <- as.matrix(dist(GetTissueCoordinates(vizgen.hippo,image = "s2r1")[,c("x","y")]))
+colnames(real) <- colnames(vizgen.hippo)
+rownames(real) <- colnames(vizgen.hippo)
+```
+
+
+```{r}
+seed1 <- as.matrix(dist(hippo.vizgen.visium1$scHolography.sc@meta.data[,c("z3d_sp","y3d_sp","x3d_sp")]))
+
+
+seed2 <- as.matrix(dist(hippo.vizgen.visium2$scHolography.sc@meta.data[,c("z3d_sp","y3d_sp","x3d_sp")]))
+
+seed3 <- as.matrix(dist(hippo.vizgen.visium3$scHolography.sc@meta.data[,c("z3d_sp","y3d_sp","x3d_sp")]))
+
+seed4 <- as.matrix(dist(hippo.vizgen.visium4$scHolography.sc@meta.data[,c("z3d_sp","y3d_sp","x3d_sp")]))
+
+seed5 <- as.matrix(dist(hippo.vizgen.visium5$scHolography.sc@meta.data[,c("z3d_sp","y3d_sp","x3d_sp")]))
+
+```
+
+
+
+```{r}
+
+neighbor.eval2 <- function(dist.mat,max.neighbor,n.by,start){
+  bench <-real
+  expr <- vizgen.hippo@assays$Vizgen@counts
+  test <- dist.mat
+  diag(bench)<-10^15
+  diag(test)<-10^15
+  
+  neighbor.comp.corr.mtx <- c()
+  for (i in seq(start+1,(max.neighbor+1),by=n.by)) {
+    nn.real.ls <- lapply(colnames(dist.mat), function(x) {
+      ind <- which(bench[x,colnames(dist.mat)]<=sort(bench[x,colnames(dist.mat)])[i])
+      rowSums(expr[,colnames(dist.mat[,ind])])
+    })
+    
+    nn.ls <- lapply(colnames(dist.mat), function(x) {
+      ind <- which(test[x,colnames(dist.mat)]<=sort(test[x,colnames(dist.mat)])[i])
+      rowSums(expr[,colnames(dist.mat[,ind])])
+    })
+    
+    neighbor.comp.corr <- unlist(lapply(1:length(nn.ls), function(x) {
+      lsa::cosine(nn.real.ls[[x]],nn.ls[[x]])
+    }))
+    neighbor.comp.corr.mtx <- c(neighbor.comp.corr.mtx,neighbor.comp.corr)
+    
+  }
+  
+  neighbor.comp.corr.mtx <- matrix(neighbor.comp.corr.mtx,ncol = max.neighbor/n.by)
+  (neighbor.comp.corr.mtx)
+}
+
+
+
+a.3 <- neighbor.eval2(seed1,50,1,1)
+b.3 <- neighbor.eval2(seed2,50,1,1)
+c.3 <- neighbor.eval2(seed3,50,1,1)
+d.3 <- neighbor.eval2(seed4,50,1,1)
+e.3 <- neighbor.eval2(seed5,50,1,1)
+
+scholo.3 <- readRDS("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen/scholo.me.corr.rds")
+```
+
+```{r}
+
+cor.mean <- c(colMeans(a.3),colMeans(b.3),colMeans(c.3),colMeans(d.3),colMeans(e.3))
+num.neighbor <- rep(seq(1,50,by=1),5)
+method<-c(rep("seed1",50),rep("seed2",50),rep("seed3",50),rep("seed4",50),rep("seed5",50))
+df <- data.frame(mean=cor.mean, method=factor(method,levels = c("seed1","seed2","seed3","seed4","seed5")),num.neighbor=factor(num.neighbor,levels = stringr::str_sort(unique(num.neighbor),numeric = T)))
+
+library(tidyverse)
+pd <- position_dodge(0.1)
+ggplot(df, aes(x=num.neighbor, y=mean, colour=method, group=method)) + 
+  geom_line(position=pd) +
+  geom_point(position=pd) + theme_classic()+ylim(c(0.42,0.8))
+```
+```{r}
+group <- c("default(seed60611)","seed1","seed2","seed3","seed4","seed5")
+visualization.curve <- list(scholo.3,a.3,b.3,c.3,d.3,e.3)
+
+visualization.comb <- lapply(1:length(visualization.curve), function(x){
+  colnames(visualization.curve[[x]]) <- as.character(1:ncol(visualization.curve[[x]]))
+  x.sub <- reshape2::melt(visualization.curve[[x]][,seq(5,50,5)])
+  x.sub$group <- group[x]
+  x.sub$Var2 <- factor(as.character(x.sub$Var2),levels = as.character(seq(5,50,5)))
+  x.sub
+})
+visualization.comb.df <-do.call("rbind", visualization.comb)
+
+
+ggplot(visualization.comb.df, aes(x=Var2, y=value, fill=group)) + 
+  geom_boxplot()+theme_classic()+ylab("Cosine Similarity ")+xlab("Size of Spatial Neighborhood")+scale_fill_brewer(palette = "Paired")
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen/seedTest.tiff", units="in", width=7, height=5, res=600)
+ggplot(visualization.comb.df, aes(x=Var2, y=value, fill=group)) + 
+  geom_boxplot()+theme_classic()+ylab("Cosine Similarity ")+xlab("Size of Spatial Neighborhood")+scale_fill_brewer(palette = "Paired")+Seurat::NoLegend()+ theme(axis.title.x = element_blank(),axis.text.x = element_text(angle = 45,hjust=1),axis.title.y = element_text(size = 16,face = "bold"),axis.text = element_text(size = 15,face = "bold"))
+dev.off()
+
+```
+
+```{r}
+
+cor.mean <- c(colMeans(scholo.3),colMeans(a.3),colMeans(b.3),colMeans(c.3),colMeans(d.3),colMeans(e.3))
+num.neighbor <- rep(seq(1,50,by=1),6)
+method<-c(rep("default(seed60611)",50),rep("seed1",50),rep("seed2",50),rep("seed3",50),rep("seed4",50),rep("seed5",50))
+df <- data.frame(mean=cor.mean, method=factor(method,levels = c("default(seed60611)","seed1","seed2","seed3","seed4","seed5")),num.neighbor=factor(num.neighbor,levels = stringr::str_sort(unique(num.neighbor),numeric = T)))
+
+library(tidyverse)
+pd <- position_dodge(0.1)
+ggplot(df, aes(x=num.neighbor, y=mean, colour=method, group=method)) + 
+  geom_line(position=pd) +
+  geom_point(position=pd) + theme_classic()+ylim(c(0.42,0.8))
+```

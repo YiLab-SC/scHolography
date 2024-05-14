@@ -1,0 +1,270 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(Seurat)
+library(scHolography)
+library(dplyr)
+scHolography.obj <- readRDS("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/scHolography.obj_new.rds")
+
+sup.with.more.basal <- which(rowSums(scHolography.obj$adj.mtx[which(scHolography.obj$scHolography.sc$celltype%in%"Suprabasal"),which(scHolography.obj$scHolography.sc$celltype%in%"Basal")])>=min(boxplot.stats(rowSums(scHolography.obj$adj.mtx[which(scHolography.obj$scHolography.sc$celltype%in%"Suprabasal"),which(scHolography.obj$scHolography.sc$celltype%in%"Basal")]))$out)
+)
+
+sup.with.more.basal.names <- (colnames(scHolography.obj$scHolography.sc)[which(scHolography.obj$scHolography.sc$celltype%in%"Suprabasal")])[sup.with.more.basal]
+sup.with.less.basal.names <- (colnames(scHolography.obj$scHolography.sc)[which(scHolography.obj$scHolography.sc$celltype%in%"Suprabasal")])[-sup.with.more.basal]
+
+scHolography.obj$scHolography.sc$suprabasal.sub <- as.character(scHolography.obj$scHolography.sc$celltype)
+scHolography.obj$scHolography.sc$suprabasal.sub[sup.with.more.basal.names] <- "Transition_KC"
+scHolography.obj$scHolography.sc$suprabasal.sub[sup.with.less.basal.names] <- "Differentiated_KC"
+scHolography.obj$scHolography.sc$suprabasal.sub <-factor(as.character(scHolography.obj$scHolography.sc$suprabasal.sub ),levels = c("Basal", "Transition_KC", "Differentiated_KC","Endothelial", "Fibroblast","Smooth Muscle", "Lymphatic Endothelial","Schwann","Glandular Epithelium","Immune","Melanocyte"))
+
+scHolography.obj$scHolography.sc <- SetIdent(scHolography.obj$scHolography.sc,value = "suprabasal.sub") 
+DefaultAssay(scHolography.obj$scHolography.sc) <- "RNA"
+scHolography.obj$scHolography.sc <- ScaleData(scHolography.obj$scHolography.sc)
+scHolographyPlot(scHolography.obj,color.by = "suprabasal.sub",palette = "Set3")
+my.col <- c("#A6CEE3","#B96A59","#743A36")
+scHolography.obj.sub<- scHolography.obj
+scHolography.obj.sub$scHolography.sc <- subset(scHolography.obj.sub$scHolography.sc,cells=which(scHolography.obj.sub$scHolography.sc$suprabasal.sub%in%c("Basal", "Transition_KC", "Differentiated_KC")))
+scHolography.obj.sub$scHolography.sc$suprabasal.sub <- droplevels(scHolography.obj.sub$scHolography.sc$suprabasal.sub)
+
+
+scene = list(camera = list(eye = list(x = -1, z = 0, y = 2)))
+fig1 <- scHolographyPlot(scHolography.obj.sub,color.by = "suprabasal.sub",color = my.col)%>% plotly::layout(scene = scene)
+fig1
+plotly::orca(fig1, "epithelial.3.layers.svg",width = 7,height = 5)
+```
+```{r}
+library(ggplot2)
+library(ggpubr)
+n.basal <-rowSums(scHolography.obj$adj.mtx[which(scHolography.obj$scHolography.sc$celltype%in%"Suprabasal"),which(scHolography.obj$scHolography.sc$celltype%in%"Basal")])
+n.suprabasal <-rowSums(scHolography.obj$adj.mtx[which(scHolography.obj$scHolography.sc$celltype%in%"Suprabasal"),which(scHolography.obj$scHolography.sc$celltype%in%"Suprabasal")])
+type <- scHolography.obj.sub$scHolography.sc$suprabasal.sub[colnames(scHolography.obj$scHolography.sc)[which(scHolography.obj$scHolography.sc$celltype%in%"Suprabasal") ]]
+
+sup.epi.neighb <- data.frame(n.basal=n.basal, n.suprabasal=n.suprabasal, type=type)
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//sup.num.basal.vs.sup.neighbor.tiff", units="in", width=5, height=5, res=300)
+ggplot(data = sup.epi.neighb, aes(x = n.suprabasal, y = n.basal)) +
+  geom_jitter(aes(color=type)) +
+  stat_cor(label.y = 30) +theme_classic()+scale_color_manual(values = my.col[2:3])+ 
+  geom_smooth(method = "lm", 
+              formula = y ~ x) +NoLegend()+xlab("# of Suprabasal Neighbors")+ylab("# of Basal Neighbors")+theme(axis.text = element_text(size = 12,face = "bold"),axis.text.x = element_text(angle = 45,hjust=1),axis.title=element_text(size = 15,face = "bold"))
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//sup.num.basal.neighbor.tiff", units="in", width=3, height=5, res=300)
+ggplot(data = sup.epi.neighb, aes(x=type, y = n.basal)) +
+  geom_boxplot(aes(color=type),lwd=1) +theme_classic()+
+  geom_jitter(aes(color=type),width = 0.3,size=0.3,alpha = 0.4 )+scale_color_manual(values = my.col[2:3])+xlab("")+ylab("# of Basal Neighbors")+NoLegend()+theme(axis.text = element_text(size = 12,face = "bold"),axis.text.x = element_text(angle = 45,hjust=1),axis.title=element_text(size = 15,face = "bold"))
+dev.off()
+```
+
+
+```{r}
+
+my_comparisons <- list(  c("Basal", "Transition_KC"), c("Transition_KC", "Differentiated_KC")  )
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//clusterDist.Basal.tiff", units="in", width=5, height=5, res=300)
+scHolography::clusterDistanceBoxplot(scHolography.obj.sub,annotationToUse = "suprabasal.sub",query.cluster.list = c("Basal", "Transition_KC","Differentiated_KC"),reference.cluster = c("Basal"))+ggplot2::scale_fill_manual(values =my.col)+ 
+  stat_compare_means(comparisons = my_comparisons,size = 5,method.args = list(alternative="less"))+NoLegend()+theme(axis.text = element_text(size = 16,face = "bold"),axis.title.x = element_blank(),axis.title.y = element_text(size = 20,face = "bold") ,axis.text.x = element_text(angle = 45,hjust=1))
+dev.off()
+```
+
+
+```{r}
+library(dplyr)
+scHolography.obj.sub$scHolography.sc <- SetIdent(scHolography.obj.sub$scHolography.sc,value = "spatial.neighborhood")
+
+mark.sup <- FindMarkers(scHolography.obj$scHolography.sc,ident.1 = "Differentiated_KC",ident.2 = "Transition_KC",assay = "RNA")
+
+top10.pos.sup<- mark.sup%>%filter(avg_log2FC>0)
+write.csv(top10.pos.sup,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/UpReg_in_Differentiated_KC_comp_w_Transition_KC.csv")
+top10.neg.sup<- mark.sup%>%filter(avg_log2FC<0)
+write.csv(top10.neg.sup,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/DownReg_in_Differentiated_KC_comp_w_Transition_KC.csv")
+
+mark.ba <- FindMarkers(scHolography.obj$scHolography.sc,ident.1 =  "Transition_KC",ident.2 = "Basal" ,assay = "RNA")
+
+top10.pos.ba<- mark.ba%>%filter(avg_log2FC>0)
+write.csv(top10.pos.ba,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/UpReg_in_Transition_KC_comp_w_Basal.csv")
+top10.neg.ba<- mark.ba%>%filter(avg_log2FC<0)
+write.csv(top10.neg.ba,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/DownReg_in_Basal_comp_w_Transition_KC.csv")
+
+```
+
+```{r}
+
+VlnPlot(scHolography.obj$scHolography.sc,c("ITGB4","LAMB3","DST","COL17A1"),idents = c("Transition_KC","Differentiated_KC","Basal "),assay = "SCT",ncol = 2,cols = my.col)
+VlnPlot(scHolography.obj$scHolography.sc,c("FABP7","THEM5","KRT10","DSG1"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT",ncol = 2,cols = my.col)
+```
+
+```{r}
+my_comparisons <- list( c("Basal", "Transition_KC"), c("Transition_KC", "Differentiated_KC") )
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.KRT5.tiff", units="in", width=4, height=5, res=300)
+VlnPlot(scHolography.obj$scHolography.sc,c("KRT5"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
+  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 6.5,method.args = list(alternative="greater"))+ylim(c(0,7))+NoLegend()+theme(axis.title.x = element_blank())
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.KRT14.tiff", units="in", width=4, height=5, res=300)
+VlnPlot(scHolography.obj$scHolography.sc,c("KRT14"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
+  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 6.5,method.args = list(alternative="greater"))+ylim(c(0,7))+NoLegend()+theme(axis.title.x = element_blank())
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.COL17A1.tiff", units="in", width=4, height=5, res=300)
+VlnPlot(scHolography.obj$scHolography.sc,c("COL17A1"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
+  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 4.5,method.args = list(alternative="greater"))+ylim(c(0,5))+NoLegend()+theme(axis.title.x = element_blank())
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.ITGA2.tiff", units="in", width=4, height=5, res=300)
+VlnPlot(scHolography.obj$scHolography.sc,c("ITGA2"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
+  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 2.75,method.args = list(alternative="greater"))+ylim(c(0,3.25))+NoLegend()+theme(axis.title.x = element_blank())
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.ITGB1.tiff", units="in", width=4, height=5, res=300)
+VlnPlot(scHolography.obj$scHolography.sc,c("ITGB1"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
+  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 2.75,method.args = list(alternative="greater"))+ylim(c(0,3.25))+NoLegend()+theme(axis.title.x = element_blank())
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.LAMB3.tiff", units="in", width=4, height=5, res=300)
+VlnPlot(scHolography.obj$scHolography.sc,c("LAMB3"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
+  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 3.5,method.args = list(alternative="greater"))+ylim(c(0,3.75))+NoLegend()+theme(axis.title.x = element_blank())
+dev.off()
+
+
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.KRT1.tiff", units="in", width=4, height=5, res=300)
+VlnPlot(scHolography.obj$scHolography.sc,c("KRT1"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
+  stat_compare_means(comparisons = my_comparisons,size = 4,label.y = 6.5,method.args = list(alternative="less"))+ylim(c(0,7))+NoLegend()+theme(axis.title.x = element_blank())
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.KRT10.tiff", units="in", width=4, height=5, res=300)
+VlnPlot(scHolography.obj$scHolography.sc,c("KRT10"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
+  stat_compare_means(comparisons = my_comparisons,size = 4,label.y = 6.5,method.args = list(alternative="less"))+ylim(c(0,7))+NoLegend()+theme(axis.title.x = element_blank())
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.KRTDAP.tiff", units="in", width=4, height=5, res=300)
+VlnPlot(scHolography.obj$scHolography.sc,c("KRTDAP"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
+  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 6.5,method.args = list(alternative="less"))+ylim(c(0,7))+NoLegend()+theme(axis.title.x = element_blank())
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.DSG1.tiff", units="in", width=4, height=5, res=300)
+VlnPlot(scHolography.obj$scHolography.sc,c("DSG1"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
+  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 4,method.args = list(alternative="less"))+ylim(c(0,4.5))+NoLegend()+theme(axis.title.x = element_blank())
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.NECTIN1.tiff", units="in", width=4, height=5, res=300)
+VlnPlot(scHolography.obj$scHolography.sc,c("NECTIN1"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
+  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 2.75,method.args = list(alternative="less"))+ylim(c(0,3))+NoLegend()+theme(axis.title.x = element_blank())
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.NOTCH2.tiff", units="in", width=4, height=5, res=300)
+VlnPlot(scHolography.obj$scHolography.sc,c("NOTCH2"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
+  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 1.8,method.args = list(alternative="less"))+ylim(c(0,2))+NoLegend()+theme(axis.title.x = element_blank())
+dev.off()
+```
+
+```{r}
+
+epi.sub <- subset(scHolography.obj$scHolography.sc, cells = which(scHolography.obj$scHolography.sc@active.ident%in% c("Transition_KC","Differentiated_KC")))
+DefaultAssay(epi.sub) <- "RNA"
+DotPlot(epi.sub,features = c("HSPG2","COL17A1","PDGFA","ITGB1","ITGA2","COL7A1","ITGB4","LAMB3","DST", 
+                             "KRT1","KRT10","DSG1","EVPL","PERP", #keratinization
+                             "PLA2G4F","STARD10","PLPP2","RORA","HMGCR","FABP7","DBI","THEM5","EPHX2","PTGS1","GSTA4" ),assay = "SCT")+viridis::scale_color_viridis()+ggplot2::coord_flip()+ theme(axis.text.x = element_text(angle = 45, hjust=1))
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//DotPlot.trans.vs.diff.tiff", units="in", width=3, height=10, res=300)
+DotPlot(epi.sub,features = c(rownames(mark.sup %>%top_n(n = 10, wt = avg_log2FC) ),rownames(mark.sup %>%top_n(n = 10, wt = -avg_log2FC) )),assay = "SCT")+viridis::scale_color_viridis()+ggplot2::coord_flip()+ theme(axis.text.x = element_text(angle = 45, hjust=1))+theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))+NoLegend()
+dev.off()
+```
+```{r}
+epi.sub <- subset(scHolography.obj$scHolography.sc, cells = which(scHolography.obj$scHolography.sc@active.ident%in% c("Transition_KC","Basal")))
+DefaultAssay(epi.sub) <- "RNA"
+DotPlot(epi.sub,features = c("ANXA1","CLSTN1","DUSP6","PTPRZ1","MEF2A", #signal transduction
+                             "COL17A1","PDGFA","ITGB1","COL4A5","COL7A1","ITGB4","LAMB3","DST", #extracellular matrix
+                             "DSG1","KRT1","KRT10",
+                             "NECTIN1","NECTIN4","CLDN4","CLDN1"
+),assay = "SCT")+viridis::scale_color_viridis()+ggplot2::coord_flip()+ theme(axis.text.x = element_text(angle = 45, hjust=1))
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//DotPlot.trans.vs.basal.tiff", units="in", width=3, height=10, res=300)
+DotPlot(epi.sub,features = c(rownames(mark.ba %>%top_n(n = 10, wt = avg_log2FC) ),rownames(mark.ba %>%top_n(n = 10, wt = -avg_log2FC) )),assay = "SCT")+viridis::scale_color_viridis()+ggplot2::coord_flip()+ theme(axis.text.x = element_text(angle = 45, hjust=1))+theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))+NoLegend()
+dev.off()
+```
+
+
+
+
+```{r}
+library(CellChat)
+epi.sub <- subset(scHolography.obj$scHolography.sc, cells = which(scHolography.obj$scHolography.sc@active.ident%in% c("Transition_KC","Basal","Differentiated_KC")))
+epi.sub$suprabasal.sub <- droplevels(epi.sub$suprabasal.sub )
+cellchat.obj <- createCellChat(epi.sub,group.by = "suprabasal.sub",assay = "SCT")
+CellChatDB <- CellChatDB.human
+CellChatDB.use <- CellChatDB 
+cellchat.obj@DB <- CellChatDB.use
+cellchat.obj <- subsetData(cellchat.obj)
+cellchat.obj <- identifyOverExpressedGenes(cellchat.obj)
+cellchat.obj <- identifyOverExpressedInteractions(cellchat.obj)
+```
+```{r}
+cellchat.obj <- computeCommunProb(cellchat.obj)
+# Filter out the cell-cell communication if there are only few number of cells in certain cell groups
+cellchat.obj <- filterCommunication(cellchat.obj, min.cells = 10)
+cellchat.obj <- computeCommunProbPathway(cellchat.obj)
+cellchat.obj <- aggregateNet(cellchat.obj)
+```
+```{r}
+library(RColorBrewer)
+
+cellchat.obj <- netAnalysis_computeCentrality(cellchat.obj, slot.name = "netP") 
+my.sig <- c("LAMININ","THBS","DESMOSOME","NECTIN","NOTCH","EGF","NRG")
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.cellchat.out.tiff", units="in", width=9, height=6, res=300)
+netAnalysis_signalingRole_heatmap(cellchat.obj, pattern = "outgoing",width = 9,height = 6,font.size = 15,color.heatmap = "YlOrRd",signaling =my.sig,color.use = my.col )
+dev.off()
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.cellchat.in.tiff", units="in", width=9, height=6, res=300)
+netAnalysis_signalingRole_heatmap(cellchat.obj, pattern = "incoming",width = 9,height = 6,font.size = 15,color.heatmap = "YlOrRd",signaling =my.sig,color.use = my.col  )
+dev.off()
+```
+
+```{r}
+for (i in my.sig) {
+  show(CellChat::netAnalysis_contribution(cellchat.obj, signaling = i))
+}
+```
+
+
+
+
+```{r}
+Reactome_2022_high_diff <- read.delim("~/Library/CloudStorage/OneDrive-NorthwesternUniversity/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/Reactome_2022_HIGH_in_diff_kc.txt", quote="")
+Reactome_2022_high_diff.sub <- Reactome_2022_high_diff[1:5,]
+Reactome_2022_high_diff.sub$Term <- unlist(lapply(Reactome_2022_high_diff.sub$Term , function(x) strsplit(x," R-HSA")[[1]][1]))
+Reactome_2022_high_diff.sub$Term <- factor(Reactome_2022_high_diff.sub$Term,levels = rev(Reactome_2022_high_diff.sub$Term))
+
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Reactome_2022_high_diff.tiff", units="in", width=6, height=6, res=300)
+ggplot(data=Reactome_2022_high_diff.sub, aes(x=Term, y=-log(Adjusted.P.value))) +
+  geom_bar(stat="identity",fill=my.col[3]) + coord_flip()+theme_classic()+theme(axis.title.y = element_blank(),axis.text.y = element_blank(),axis.text = element_text(size = 15,face = "bold"),axis.title  = element_text(size = 15,face = "bold"))
+dev.off()
+
+
+
+ggplot(data=Reactome_2022_high_diff.sub, aes(x=Term, y=-log(Adjusted.P.value))) +
+  geom_bar(stat="identity",fill=my.col[3]) + coord_flip()+theme_classic()+theme(axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"),axis.title  = element_text(size = 15,face = "bold"))+geom_text(aes(label=Genes), y=c(0),hjust = 0,color="white", size=c(1.75,2.25,2.5,2.5,2.5))+theme(axis.title.y = element_blank())
+```
+```{r}
+Reactome_2022_high_trans <- read.delim("~/Library/CloudStorage/OneDrive-NorthwesternUniversity/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/Reactome_2022_HIGH_in_trans.txt", quote="")
+Reactome_2022_high_trans.sub <- Reactome_2022_high_trans[1:5,]
+Reactome_2022_high_trans.sub$Term <- unlist(lapply(Reactome_2022_high_trans.sub$Term , function(x) strsplit(x," R-HSA")[[1]][1]))
+Reactome_2022_high_trans.sub$Term <- factor(Reactome_2022_high_trans.sub$Term,levels = rev(Reactome_2022_high_trans.sub$Term))
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Reactome_2022_high_trans.tiff", units="in", width=6, height=6, res=300)
+ggplot(data=Reactome_2022_high_trans.sub, aes(x=Term, y=-log(Adjusted.P.value))) +
+  geom_bar(stat="identity",fill=my.col[2]) + coord_flip()+theme_classic()+theme(axis.title.y = element_blank(),axis.text.y = element_blank(),axis.text = element_text(size = 15,face = "bold"),axis.title  = element_text(size = 15,face = "bold"))
+dev.off()
+
+
+ggplot(data=Reactome_2022_high_trans.sub, aes(x=Term, y=-log(Adjusted.P.value))) +
+  geom_bar(stat="identity",fill=my.col[2]) + coord_flip()+theme_classic()+theme(axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"),axis.title  = element_text(size = 15,face = "bold"))+theme_classic()+geom_text(aes(label=Genes), y=c(0),hjust = 0,color="white", size=c(2.5,2.5,2.5,2.5,2.5))+theme(axis.title.y = element_blank())
+```
+
+
+
