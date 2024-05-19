@@ -14,7 +14,7 @@ RoxygenNote: 7.2.3
 Imports: 
     dplyr,
     RColorBrewer,
-    Seurat,
+    Seurat (<= 4.4.0),
     cowplot,
     dplyr,
     ggplot2,
@@ -32,7 +32,7 @@ Imports:
     MASS,
     colorspace,
     viridis,
-    SeuratObject,
+    SeuratObject (<= 4.1.4),
     gmodels,
     cluster,
     purrr
