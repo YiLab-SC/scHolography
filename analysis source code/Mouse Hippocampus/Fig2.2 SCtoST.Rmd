@@ -60,9 +60,6 @@ plot_ly( x = pca.obj[ind,1], y = pca.obj[ind,2], z = pca.obj[ind,3], color = hip
 ```
 
 
-```{r}
-clusterDistanceBoxplot(hippo.brain.obj.visium,annotationToUse = "celltype",query.cluster.list = c("CA1 Principal cells","CA2 Principal cells","CA3 Principal cells"),reference.cluster=c(  "CA1 Principal cells"))
-```
 
 ```{r}
 

@@ -33,7 +33,7 @@ ImageDimPlot(vizgen.obj.sub, fov = "s2r1", cols = "polychrome", axes = TRUE)
 
 
 ```{r}
-ref <- readRDS("~/Downloads/mouse_hippocampus_reference.rds")
+ref <- readRDS("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/mouse_hippocampus_reference.rds")
 ref$celltype <- factor(as.character(ref$celltype),levels = stringr::str_sort(unique(as.character(ref$celltype)),numeric = T))
 DimPlot(ref,group.by = "celltype")
 
@@ -114,6 +114,7 @@ DimPlot(visium)
 SpatialDimPlot(visium,label = T)
 ```
 ```{r}
+library(scHolography)
 sp.integrated<- dataAlign(low.res.sp =  visium,high.res.sp =  vizgen.hippo,stProcessed = T,scProcessed = T,future.size = 7000)
 hippo.vizgen.visium<-trainHolography(sp.integrated,n.repeat = 30,fov = "s2r1",which.fov = 2)
 hippo.vizgen.visium <- readRDS("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen/hippo.vizgen.visium.rds")
@@ -139,7 +140,7 @@ stsc_traint <- CellTrek::traint(st_data=low.res.sp, sc_data=low.res.sp2, sc_assa
 
 stsc_celltrek <- CellTrek::celltrek(st_sc_int=stsc_traint, int_assay='traint', sc_data=low.res.sp2, sc_assay = 'SCT', reduction='pca', intp=T, intp_pnt=2000, intp_lin=F, nPCs=30, ntree=1000, dist_thresh=999, top_spot=1, spot_n=100, repel_r=20, repel_iter=20, keep_model=T)$celltrek
 
-stsc_celltrek$celltype <- factor(stsc_celltrek$celltype, levels = sort(unique(as.character(stsc_celltrek$celltype))))
+stsc_celltrek$celltype <- factor(stsc_celltrek$predicted.id, levels = sort(unique(as.character(stsc_celltrek$predicted.id))))
 DimPlot(stsc_celltrek,reduction = "celltrek",group.by = "predicted.id")
 
 saveRDS(stsc_celltrek,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/simulate_vizgen/stsc_celltrek.rds")
@@ -264,6 +265,8 @@ colnames(celltrek) <- unlist(lapply(colnames(celltrek),function(x) unlist(strspl
 
 cyto <- as.matrix(dist(vizgen.hippo.cyto@meta.data[,c("row","col")]))
 seurat <- as.matrix(dist(low.res.sp2@meta.data[,c("predicted.row","predicted.col")]))
+rownames(seurat) <- unlist(lapply(colnames(seurat),function(x) unlist(strsplit(x,split = "X"))[2]))
+colnames(seurat) <- unlist(lapply(colnames(seurat),function(x) unlist(strsplit(x,split = "X"))[2]))
 tangram <- as.matrix(dist(vizgen.hippo@meta.data[,c("tangram.pre.x","tangram.pre.y")]))
 
 ```

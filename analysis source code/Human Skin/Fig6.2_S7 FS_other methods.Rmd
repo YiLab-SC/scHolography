@@ -8,9 +8,7 @@ low.res.sp<-Seurat::Load10X_Spatial("~/OneDrive - Northwestern University/Northw
 high.res.sp<-readRDS("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Spatial Transcriptomics/VAE/f2.rds")
 ```
 
-```{r}
-load("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/FS_other method.RData")
-```
+
 
 ```{r}
 library(CellTrek)
@@ -109,11 +107,11 @@ celltrek.bulk.count.obj$col <- as.data.frame(celltrek.bulk.count.obj@reductions$
 library(plotly)
 library(dplyr)
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/celltrek.recon.tiff", units="in", width=4.5, height=4.5, res=600)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/celltrek.recon_rev.tiff", units="in", width=4.5, height=4.5, res=600)
 ggplot(celltrek.bulk.count.obj@meta.data)+geom_point(aes(x=row,y=col,color=spatial.neighborhood),size=1)+theme_void()+scale_color_manual(values = other.color)+NoLegend()
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/celltrek.recon.derm.tiff", units="in", width=4.5, height=4.5, res=600)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/celltrek.recon.derm_rev.tiff", units="in", width=4.5, height=4.5, res=600)
 ggplot(celltrek.bulk.count.obj@meta.data[which(celltrek.bulk.count.obj@meta.data$spatial.neighborhood%in%c(1,2)),])+geom_point(aes(x=row,y=col,color=spatial.neighborhood),size=1)+theme_void()+scale_color_manual(values = other.color)+NoLegend()
 dev.off()
 
@@ -134,6 +132,7 @@ celltrek.sp.fib.mark%>%filter(p_val<=0.05)
 
 low.res.sp2 <- RenameCells(low.res.sp2,new.names = unlist(lapply(colnames(low.res.sp2),function(x)  unlist(strsplit(x,"-") )[1])))
 celltrek.bulk.count.obj <- RenameCells(celltrek.bulk.count.obj, new.names = unlist(lapply(colnames(celltrek.bulk.count.obj),function(x)  unlist(strsplit(x,"[.]") )[1])))
+low.res.sp2 <- RenameCells(low.res.sp2, new.names = unlist(lapply(colnames(low.res.sp2),function(x)  unlist(strsplit(x,"[.]") )[1])))
 low.res.sp2.sub <- subset(low.res.sp2, cells = colnames(celltrek.bulk.count.obj))
 
 low.res.sp2.sub$spatial.neighborhood <- celltrek.bulk.count.obj$spatial.neighborhood
@@ -152,7 +151,7 @@ celltrek.sp.fib.mark.neighb%>%
 celltrek.sp.fib.mark.neighb%>%
     top_n(n = 12, wt = -avg_log2FC)
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/celltrek.recon.derm.heat.tiff", units="in", width=6, height=4.5, res=600)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/celltrek.recon.derm.heat_rev.tiff", units="in", width=6, height=4.5, res=600)
 DoHeatmap(celltrek.bulk.count.obj.neighb,assay = "SCT",features = c(rownames(celltrek.sp.fib.mark.neighb%>%
                top_n(n = 12, wt = avg_log2FC)),rownames(celltrek.sp.fib.mark.neighb%>%
                                                             top_n(n = 12, wt = -avg_log2FC))),group.colors = other.color[1:2],label = F)+viridis::scale_fill_viridis()

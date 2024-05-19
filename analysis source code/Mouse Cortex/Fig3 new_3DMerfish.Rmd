@@ -33,17 +33,17 @@ mouse1sample1.boundary$X <- paste0("cell_",(mouse1sample1.boundary$X))
 rownames(mouse1sample1.boundary) <- mouse1sample1.boundary$X
 
 
-as.numeric(unlist(strsplit(mouse1sample1.boundary$boundaryX[1],",")))
-as.numeric(unlist(strsplit(mouse1sample1.boundary$boundaryY[1],",")))
+as.numeric(unlist(strsplit(mouse1sample1.boundary$boundaryX_z3[1],",")))
+as.numeric(unlist(strsplit(mouse1sample1.boundary$boundaryY_z3[1],",")))
 
 mouse1sample1.boundary.cent <- matrix(nrow=nrow(mouse1sample1.boundary), ncol = 2)
 for (i in 1:nrow(mouse1sample1.boundary)) {
-  if(length(unlist(strsplit(mouse1sample1.boundary$boundaryX[i],",")))<3){
+  if(length(unlist(strsplit(mouse1sample1.boundary$boundaryX_z3[i],",")))<3){
     mouse1sample1.boundary.cent[i, ]<- c(NA,NA)
   }else{
     mouse1sample1.boundary.cent[i, ]<- unlist(centroids(vect(cbind(
-      as.numeric(unlist(strsplit(mouse1sample1.boundary$boundaryX[i],","))),
-      as.numeric(unlist(strsplit(mouse1sample1.boundary$boundaryY[i],",")))),
+      as.numeric(unlist(strsplit(mouse1sample1.boundary$boundaryX_z3[i],","))),
+      as.numeric(unlist(strsplit(mouse1sample1.boundary$boundaryY_z3[i],",")))),
       type="polygons"),inside=T)@ptr$coordinates())
   }
   
@@ -150,6 +150,8 @@ def.col[which(stringr::str_sort(unique(scHolography.obj.slice40toslice40$scHolog
 
 fig.2dq <- scHolographyPlot(scHolography.obj.slice40toslice40,color.by = "subclass",cells =which(scHolography.obj.slice40toslice40$scHolography.sc$class_label%in%"Glutamatergic") ,color = def.col)%>% plotly::layout(scene = list(camera = list(eye = list(x = 2.25, z = 0, y = 0))))
 plotly::orca(fig.2dq, "fig.2dq.svg",width = 4.5,height = 6)
+
+fig.2dq
 ```
 
 ```{r}
@@ -162,6 +164,8 @@ tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2
 ggplot(merfish.seurat.mouse1_sample1.slice40.sub.glu.sub@meta.data)+
   geom_point(aes(x=CentroidX,y = -CentroidY,color=subclass))+theme_void()+scale_color_brewer(palette = "Paired")+theme(axis.title = element_blank(),axis.text = element_blank(),axis.ticks = element_blank())+Seurat::NoLegend()
 dev.off()
+
+slice40
 ```
 
 ```{r}
@@ -171,14 +175,15 @@ merfish.seurat.mouse1_sample1.30.40.50sub.8000 <- subset(merfish.seurat.mouse1_s
 
 sp.integrated.merfish.slice3Dtoslice40 <- dataAlign(low.res.sp =  merfish.seurat.mouse1_sample1.slice40.sub,high.res.sp =  merfish.seurat.mouse1_sample1.30.40.50sub.8000,scProcessed = T,stProcessed = T,future.size = 7000)
 scHolography.obj.slice3Dtoslice40 <- trainHolography(sp.integrated.merfish.slice3Dtoslice40)
-saveRDS(scHolography.obj.slice3Dtoslice40,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/3D Merfish/Merfish new//merfish.slice3Dtoslice40 .rds")
+saveRDS(scHolography.obj.slice3Dtoslice40,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/3D Merfish/Merfish new//merfish.slice3Dtoslice40.rds")
 def.col <- rep("black",length(unique(scHolography.obj.slice3Dtoslice40$scHolography.sc$subclass)))
 def.col[which(stringr::str_sort(unique(scHolography.obj.slice3Dtoslice40$scHolography.sc$subclass),numeric = T)%in%stringr::str_sort(unique(scHolography.obj.slice3Dtoslice40$scHolography.sc$subclass[which(scHolography.obj.slice3Dtoslice40$scHolography.sc$class_label%in%"Glutamatergic")]),numeric = T))] <-(RColorBrewer::brewer.pal(12,"Paired"))[1:9] 
 
 
-
-
 fig.3dq <- scHolographyPlot(scHolography.obj.slice3Dtoslice40,color.by = "subclass",cells =which(scHolography.obj.slice3Dtoslice40$scHolography.sc$class_label%in%"Glutamatergic") ,color = def.col)%>% plotly::layout(scene = list(camera = list(eye = list(x = 0, z = 1.75, y = 0))))
+fig.3dq
+
+
 plotly::orca(fig.3dq, "fig.3dq.svg",width = 4.5,height = 6)
 ```
 

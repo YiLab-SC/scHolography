@@ -65,10 +65,10 @@ dev.off()
 
 my_comparisons <- list(  c("Basal", "Transition_KC"), c("Transition_KC", "Differentiated_KC")  )
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//clusterDist.Basal.tiff", units="in", width=5, height=5, res=300)
+#tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//clusterDist.Basal.tiff", units="in", width=5, height=5, res=300)
 scHolography::clusterDistanceBoxplot(scHolography.obj.sub,annotationToUse = "suprabasal.sub",query.cluster.list = c("Basal", "Transition_KC","Differentiated_KC"),reference.cluster = c("Basal"))+ggplot2::scale_fill_manual(values =my.col)+ 
   stat_compare_means(comparisons = my_comparisons,size = 5,method.args = list(alternative="less"))+NoLegend()+theme(axis.text = element_text(size = 16,face = "bold"),axis.title.x = element_blank(),axis.title.y = element_text(size = 20,face = "bold") ,axis.text.x = element_text(angle = 45,hjust=1))
-dev.off()
+#dev.off()
 ```
 
 
@@ -94,8 +94,8 @@ write.csv(top10.neg.ba,"~/OneDrive - Northwestern University/Northwestern/Yi Lab
 
 ```{r}
 
-VlnPlot(scHolography.obj$scHolography.sc,c("ITGB4","LAMB3","DST","COL17A1"),idents = c("Transition_KC","Differentiated_KC","Basal "),assay = "SCT",ncol = 2,cols = my.col)
-VlnPlot(scHolography.obj$scHolography.sc,c("FABP7","THEM5","KRT10","DSG1"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT",ncol = 2,cols = my.col)
+# VlnPlot(scHolography.obj$scHolography.sc,c("ITGB4","LAMB3","DST","COL17A1"),idents = c("Transition_KC","Differentiated_KC","Basal "),assay = "SCT",ncol = 2,cols = my.col)
+# VlnPlot(scHolography.obj$scHolography.sc,c("FABP7","THEM5","KRT10","DSG1"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT",ncol = 2,cols = my.col)
 ```
 
 ```{r}
@@ -148,20 +148,6 @@ VlnPlot(scHolography.obj$scHolography.sc,c("KRTDAP"),idents = c("Transition_KC",
   stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 6.5,method.args = list(alternative="less"))+ylim(c(0,7))+NoLegend()+theme(axis.title.x = element_blank())
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.DSG1.tiff", units="in", width=4, height=5, res=300)
-VlnPlot(scHolography.obj$scHolography.sc,c("DSG1"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
-  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 4,method.args = list(alternative="less"))+ylim(c(0,4.5))+NoLegend()+theme(axis.title.x = element_blank())
-dev.off()
-
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.NECTIN1.tiff", units="in", width=4, height=5, res=300)
-VlnPlot(scHolography.obj$scHolography.sc,c("NECTIN1"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
-  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 2.75,method.args = list(alternative="less"))+ylim(c(0,3))+NoLegend()+theme(axis.title.x = element_blank())
-dev.off()
-
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.NOTCH2.tiff", units="in", width=4, height=5, res=300)
-VlnPlot(scHolography.obj$scHolography.sc,c("NOTCH2"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
-  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 1.8,method.args = list(alternative="less"))+ylim(c(0,2))+NoLegend()+theme(axis.title.x = element_blank())
-dev.off()
 ```
 
 ```{r}
@@ -226,14 +212,6 @@ netAnalysis_signalingRole_heatmap(cellchat.obj, pattern = "incoming",width = 9,h
 dev.off()
 ```
 
-```{r}
-for (i in my.sig) {
-  show(CellChat::netAnalysis_contribution(cellchat.obj, signaling = i))
-}
-```
-
-
-
 
 ```{r}
 Reactome_2022_high_diff <- read.delim("~/Library/CloudStorage/OneDrive-NorthwesternUniversity/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/Reactome_2022_HIGH_in_diff_kc.txt", quote="")
@@ -252,6 +230,8 @@ ggplot(data=Reactome_2022_high_diff.sub, aes(x=Term, y=-log(Adjusted.P.value))) 
   geom_bar(stat="identity",fill=my.col[3]) + coord_flip()+theme_classic()+theme(axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"),axis.title  = element_text(size = 15,face = "bold"))+geom_text(aes(label=Genes), y=c(0),hjust = 0,color="white", size=c(1.75,2.25,2.5,2.5,2.5))+theme(axis.title.y = element_blank())
 ```
 ```{r}
+### Run Reatome 2022 on genes with <0.05 adjusted p values in UpReg_in_Differentiated_KC_comp_w_Transition_KC.csv and UpReg_in_Transition_KC_comp_w_Basal.csv
+
 Reactome_2022_high_trans <- read.delim("~/Library/CloudStorage/OneDrive-NorthwesternUniversity/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin/Reactome_2022_HIGH_in_trans.txt", quote="")
 Reactome_2022_high_trans.sub <- Reactome_2022_high_trans[1:5,]
 Reactome_2022_high_trans.sub$Term <- unlist(lapply(Reactome_2022_high_trans.sub$Term , function(x) strsplit(x," R-HSA")[[1]][1]))

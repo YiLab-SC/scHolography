@@ -38,6 +38,20 @@ Seurat::DimPlot(high.res.sp,group.by = "celltype",cols = c("#A6CEE3","#79C360", 
 dev.off()
 ```
 ```{r}
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//integration.rslt.tiff", units="in", width=5, height=5, res=300)
+DimPlot(sp.integrated,group.by = "type.assay")+NoLegend()
+dev.off()
+```
+
+```{r}
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//cellmarker.vln.sc.tiff", units="in", width=6, height=6, res=300)
+VlnPlot(high.res.sp,group.by = "celltype",c("KRT10","ACTA2","MPZ","PMEL","PROX1","CD74","KRT6A","PECAM1","COL1A2","KRT5"),assay = "RNA",stack = T,flip = T)+NoLegend()+theme(axis.text = element_text(size = 16,face = "bold"),axis.title.x = element_blank(),axis.title.y = element_text(size = 16,face = "bold") ,axis.text.x = element_text(angle = 30,hjust=1))+scale_fill_manual(values = rev(c("#A6CEE3","#79C360", "#3F8EAA",  "#B89B74", "#E52829", "#FDB762", "#ED8F47", "#9471B4" ,"#DDD399" ,"#B15928")))
+dev.off()
+```
+
+
+
+```{r}
 scHolography.obj$scHolography.sc$celltype<- as.character(scHolography.obj$scHolography.sc$orig.cluster)
 
 scHolography.obj$scHolography.sc$celltype[which(scHolography.obj$scHolography.sc$celltype%in%c("2","6","8"))]<-"Suprabasal"
@@ -68,6 +82,13 @@ fig4<-scHolographyPlot(scHolography.obj,feature = "COL1A2")%>% plotly::layout(sc
 fig5<-scHolographyPlot(scHolography.obj,feature = "ACTA2")%>% plotly::layout(scene = scene)
 
 
+fig1
+fig2
+fig3
+fig4
+fig5
+
+
 plotly::orca(fig1, "3dct.svg",width = 7,height = 5)
 plotly::orca(fig2, "3dct.KRT10.svg",width = 7,height = 5)
 plotly::orca(fig3, "3dct.KRT5.svg",width = 7,height = 5)
@@ -91,6 +112,13 @@ plotly::orca(fig.L3, "3dct.sub.L3.svg",width = 7,height = 5)
 
 fig.L4 <- (scHolographyPlot(scHolography.obj,color.by = "celltype",cells = which(scHolography.obj$scHolography.sc$celltype%in%c("Suprabasal","Basal","Dermal", "Smooth Muscle")))%>% plotly::layout(scene = scene) )
 plotly::orca(fig.L4, "3dct.sub.L4.svg",width = 7,height = 5)
+
+
+fig.L1
+fig.L2
+fig.L3
+fig.L4
+
 ```
 
 
