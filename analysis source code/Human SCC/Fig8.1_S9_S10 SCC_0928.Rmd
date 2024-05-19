@@ -25,6 +25,7 @@ SCC.obj <- readRDS("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Man
 
 ```{r}
 library(Seurat)
+library(ggplot2)
 P6.sub<- subset(P6, cells = which(P6$level2_celltype%in%celltype[-which(celltype%in%c("Keratinocyte","Multiplet"))]))
 P6<-P6.sub 
 P6$level2_celltype<-factor(P6$level2_celltype)
@@ -82,7 +83,6 @@ plotly::orca(fig1, "3dct.svg",width = 7,height = 5)
 plotly::orca(fig2, "3ddisease.svg")
 ```
 ```{r}
-library(ggplot2)
 micro.env <- scHolography::scHolographyNeighborCompPlot(SCC.obj,annotationToUse ="my.level",query.cluster = c("Normal_KC_Basal" ,"Normal_KC_Cyc","Normal_KC_Diff" ,"TSK","Tumor_KC_Basal","Tumor_KC_Cyc","Tumor_KC_Diff"),color = my.col)
 tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC//microenvironment.tiff", units="in", width=6, height=5, res=600)
 micro.env$neighbor.comp.plot+ theme(axis.text.x = element_text(angle = 45, hjust=1))+theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))+NoLegend()

@@ -4,6 +4,7 @@ output: html_notebook
 ---
 
 
+
 ```{r}
 
 #####Load in data & infer centroid
@@ -11,9 +12,9 @@ library(zellkonverter)
 library(Seurat)
 library(terra)
 library(ggplot2)
-counts_h5ad <- readH5AD("/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D//data/counts.h5ad")
+counts_h5ad <- readH5AD("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Merfish_3D//data/counts.h5ad")
 counts.mat <- counts_h5ad@assays@data$X
-merfish.meta <- read.csv("/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D//data/cell_labels.csv")
+merfish.meta <- read.csv("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Merfish_3D//data/cell_labels.csv")
 merfish.meta$X <- paste0("cell_",(merfish.meta$X))
 colnames(counts.mat) <- paste0("cell_",as.numeric(colnames(counts.mat)))
 rownames(merfish.meta) <- merfish.meta$X
@@ -29,7 +30,7 @@ merfish.seurat <- FindClusters(merfish.seurat)
 merfish.seurat <- RunUMAP(merfish.seurat,dims = 1:30)
 
 # Process data for sample1
-mouse1sample1.boundary <- read.csv("/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D//data/segmented_cells_mouse1sample1.csv")
+mouse1sample1.boundary <- read.csv("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Merfish_3D//data/segmented_cells_mouse1sample1.csv")
 
 mouse1sample1.boundary$X <- paste0("cell_",(mouse1sample1.boundary$X))
 rownames(mouse1sample1.boundary) <- mouse1sample1.boundary$X
@@ -57,12 +58,12 @@ mouse1sample1.boundary.cent <- as.data.frame(mouse1sample1.boundary.cent)
 merfish.seurat.mouse1_sample1 <- subset(merfish.seurat,cells=which(merfish.seurat$sample_id%in%"mouse1_sample1"))
 
 merfish.seurat.mouse1_sample1 <- AddMetaData(merfish.seurat.mouse1_sample1,mouse1sample1.boundary.cent)
-saveRDS(merfish.seurat.mouse1_sample1,"/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D//merfish.seurat.mouse1_sample1.rds")
+saveRDS(merfish.seurat.mouse1_sample1,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Merfish_3D//merfish.seurat.mouse1_sample1.rds")
 ```
 
 ```{r}
 # Process data for sample2
-mouse1sample2.boundary <- read.csv("/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D//data/segmented_cells_mouse1sample2.csv")
+mouse1sample2.boundary <- read.csv("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Merfish_3D//data/segmented_cells_mouse1sample2.csv")
 
 mouse1sample2.boundary$X <- paste0("cell_",(mouse1sample2.boundary$X))
 rownames(mouse1sample2.boundary) <- mouse1sample2.boundary$X
@@ -90,7 +91,7 @@ mouse1sample2.boundary.cent <- as.data.frame(mouse1sample2.boundary.cent)
 merfish.seurat.mouse1_sample2 <- subset(merfish.seurat,cells=which(merfish.seurat$sample_id%in%"mouse1_sample2"))
 
 merfish.seurat.mouse1_sample2 <- AddMetaData(merfish.seurat.mouse1_sample2,mouse1sample2.boundary.cent)
-saveRDS(merfish.seurat.mouse1_sample2,"/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D//merfish.seurat.mouse1_sample2.rds")
+saveRDS(merfish.seurat.mouse1_sample2,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Merfish_3D//merfish.seurat.mouse1_sample2.rds")
 ```
 
 ```{r}
@@ -143,7 +144,7 @@ for (i in 1:length(merfish.seurat.mouse1_sample2.slice.list)) {
 save_seurat_data <- function(seurat_object.og, prefix,wd) {
   # Extract gene expression data
   set.seed(60611)
-  seurat_object <- subset(seurat_object.og,cells=sample(which(is.na(rowSums(seurat_object.og@meta.data[, c("CentroidX", "CentroidY")]))==F),1500))
+  seurat_object <- subset(seurat_object.og,cells=sort(sample(which(is.na(rowSums(seurat_object.og@meta.data[, c("CentroidX", "CentroidY")]))==F),1500)))
   expression_data <- t(as.data.frame(seurat_object@assays$RNA@counts))
   
   # Extract spatial coordinates (assuming they are stored in metadata)
@@ -165,8 +166,8 @@ save_seurat_sample_to_paste<- function(seurat_list, my_dir, this_name){
   }}
 
 
-save_seurat_sample_to_paste(seurat_list = merfish.seurat.mouse1_sample2.slice.list, my_dir="/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D/",this_name="paste_sample2/")
+save_seurat_sample_to_paste(seurat_list = merfish.seurat.mouse1_sample2.slice.list, my_dir="~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Merfish_3D/",this_name="paste_sample2/")
 
-save_seurat_sample_to_paste(seurat_list = merfish.seurat.mouse1_sample1.slice.list, my_dir="/projects/b1042/YiLab/Cady/Code_3rdDraft/Merfish_3D/",this_name="paste_sample1/")
+save_seurat_sample_to_paste(seurat_list = merfish.seurat.mouse1_sample1.slice.list, my_dir="~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Merfish_3D/",this_name="paste_sample1/")
 
 ```

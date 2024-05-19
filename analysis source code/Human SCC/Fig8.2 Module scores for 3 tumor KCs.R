@@ -1,4 +1,90 @@
+library(scHolography)
+library(Seurat)
+library(RColorBrewer)
+library(dplyr)
+library(qusage)
+library(ggplot2)
+
+scc.sp.neighbor.tumor_new <- readRDS("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/scc.sp.neighbor.tumor_new.rds")
+
+scc.sp.neighbor.tumor_new$neighbor.marker %>%
+  group_by(cluster) %>%
+  top_n(n = 10, wt = avg_log2FC) -> top10
+DoHeatmap(scc.sp.neighbor.tumor_new$bulk.count.obj,assay = "SCT", features = top10$gene,group.colors = (brewer.pal(3,"RdPu"))) +
+  NoLegend()+viridis::scale_fill_viridis()+ NoLegend()+viridis::scale_fill_viridis()+theme(axis.text = element_text(size = 16,face = "bold"))
+
+
+scc.sp.neighbor.tumor_new$sc.marker %>% filter(p_val_adj<=0.0001)
+
+c1 <- scc.sp.neighbor.tumor_new$neighbor.marker %>% filter(p_val_adj<=0.05)%>%filter(cluster==1)
+
+c2 <- scc.sp.neighbor.tumor_new$neighbor.marker %>% filter(p_val_adj<=0.05)%>%filter(cluster==2)
+
+c3 <- scc.sp.neighbor.tumor_new$neighbor.marker  %>% filter(p_val_adj<=0.05)%>%filter(cluster==3)
+
+
+KEGG_2023 <- read.gmt("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/database/c2.cp.kegg.v2023.1.Hs.symbols.gmt")
+Reactome_2023 <- read.gmt("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/database/c2.cp.reactome.v2023.1.Hs.symbols.gmt")
+GO_BP_2023 <- read.gmt("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/database/c5.go.bp.v2023.1.Hs.symbols.gmt")
+#immune_sigdb <- read.gmt("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/database/c7.immunesigdb.v2023.1.Hs.symbols.gmt")
+hallmark <- read.gmt("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/database/h.all.v2023.1.Hs.symbols.gmt")
+
+
+
+library(readxl)
+Barkley_2022 <- read_excel("Library/CloudStorage/OneDrive-NorthwesternUniversity/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/database/Barkley_2022.xlsx",sheet = 3)
+Barkley <- lapply(1:ncol(as.matrix(Barkley_2022)),function(x) as.character(na.omit(as.matrix(Barkley_2022)[-c(1,2),x])))
+names(Barkley) <- paste("Barkley_2022_",as.character(as.matrix(Barkley_2022)[2, ]),sep = "")
+
+Gavish_2023 <- read_excel("Library/CloudStorage/OneDrive-NorthwesternUniversity/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/database/Gavish_2023.xlsx",sheet = 1)
+Gavish <- lapply(1:(ncol(Gavish_2023)-1),function(x) as.matrix(Gavish_2023)[,x])
+names(Gavish) <- paste("Gavish_2023_", colnames(as.matrix(Gavish_2023))[1:length(Gavish)], sep = "")
+
+TERM2GENE <- do.call(rbind,lapply(list(KEGG_2023, Reactome_2023, GO_BP_2023, hallmark, Barkley, Gavish), function(y){
+  y.name <- names(y)
+  do.call(rbind, lapply(1:length(y), function(x){
+    cbind(rep(y.name[x],length(y[[x]])),y[[x]])
+  }))
+}))
+
+colnames(TERM2GENE) <-c("Term","Gene")
+
+
+
+TERM2GENE.sub <- do.call(rbind,lapply(list(KEGG_2023, hallmark, Barkley, Gavish), function(y){
+  y.name <- names(y)
+  do.call(rbind, lapply(1:length(y), function(x){
+    cbind(rep(y.name[x],length(y[[x]])),y[[x]])
+  }))
+}))
+
+colnames(TERM2GENE.sub) <-c("Term","Gene")
+saveRDS(TERM2GENE.sub,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/database/TERM2GENE.sub.rds")
+saveRDS(TERM2GENE,"~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/database/TERM2GENE.rds")
+
+
+
+
+c1.gene <- c1$gene
+c2.gene <- c2$gene
+c3.gene <- c3$gene
+
+
+library("clusterProfiler")
+a <- enricher(c1.gene, TERM2GENE = TERM2GENE.sub)
+b <- enricher(c2.gene, TERM2GENE = TERM2GENE.sub)
+c <- enricher(c3.gene, TERM2GENE = TERM2GENE.sub)
+
+
+mutate(a, qscore = -log(p.adjust, base=10)) %>% barplot(x="qscore",showCategory=5)
+mutate(b, qscore = -log(p.adjust, base=10)) %>% barplot(x="qscore",showCategory=5)
+mutate(c, qscore = -log(p.adjust, base=10)) %>% barplot(x="qscore",showCategory=5)
+
+
+
+
 load("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/Enriched pathways for SPneighborhoods_part2.RData")
+
 
 
 genes_Squamous  = unlist(strsplit(a@result[1,"geneID" ],"/"))
