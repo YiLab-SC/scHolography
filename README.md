@@ -71,6 +71,8 @@ library(scHolography)
 library(Seurat)
 library(ggplot2)
 library(dplyr)
+library(RColorBrewer)
+library(viridis)
 ```
 
 Load data into our workspace:
@@ -142,7 +144,7 @@ For each cell cluster, we can further examine its inferred microenvironment by d
 ```r
 neighbor.comp<- scHolographyNeighborCompPlot(scHolography.obj,annotationToUse = "celltype",query.cluster = c("Suprabasal","Basal","Glandular Epithelium","Dermal","Endothelial","Lymphatic Endothelial","Smooth Muscle", "Schwann","Immune","Melanocyte"))
 
-my.color.order= c("#A6CEE3" ,"#79C360", "#3F8EAA" ,colorRampPalette(RColorBrewer::brewer.pal(12,"Paired"))(10)[4:10] ) # color order for the plot
+my.color.order= c("#A6CEE3" ,"#79C360", "#3F8EAA" ,colorRampPalette(brewer.pal(12,"Paired"))(10)[4:10] ) # color order for the plot
 
 neighbor.comp$neighbor.comp.plot+scale_fill_manual(values = my.color.order)
 ```
@@ -206,15 +208,16 @@ $Melanocyte
 
 ## 3. Spatial Neighborhoods
 
-The `findSpatialNeighborhood` function aims to define distinct spatial neighborhoods and study single-cell spatial heterogeneity in a transcriptome-spatial integrated manner. First, the function decides the number of distinct neighborhoods to define from scHolography inferred query cell spatial distribution. The silhouette coefficient optimizes the number of spatial neighborhoods. The accumulated SMN expression profile of SMNs for each query cell is defined as the sum of the scRNA-seq count of all SMNs of the query cell. The accumulated SMN expression matrix is normalized and the spatial neighborhoods are defined using K-means clustering with the optimized cluster number. Differentially expressed genes are found for both accumulated SMN and single-cell expressions of each spatial neighborhood. In this example, we investigate the spatial neighborhood of human dermal cells.
+The `findSpatialNeighborhood` function aims to define distinct spatial neighborhoods and study single-cell spatial heterogeneity in a transcriptome-spatial integrated manner. First, the function decides the number of distinct neighborhoods to define from scHolography inferred query cell spatial distribution. The silhouette coefficient optimizes the number of spatial neighborhoods. The accumulated SMN expression profile of SMNs for each query cell is defined as the sum of the scRNA-seq count of all SMNs of the query cell. The accumulated SMN expression matrix is normalized and the spatial neighborhoods are defined using K-means clustering with the optimized cluster number or by setting the `nNeighborhood`. Differentially expressed genes are found for both accumulated SMN and single-cell expressions of each spatial neighborhood. In this example, we investigate the spatial neighborhood of human dermal cells.
 
 
 ```r  
 #Find the spatial neighborhood of Dermal cells
-spatial.neighbor.Dermal <- findSpatialNeighborhood(scHolography.obj ,annotationToUse = "celltype",query.cluster = c("Dermal"),orig.assay = "RNA")
+spatial.neighbor.Dermal <- findSpatialNeighborhood(scHolography.obj ,annotationToUse = "celltype",query.cluster = c("Dermal"),orig.assay = "RNA",nNeighborhood = 4)
 
-#Define the color palette for the plot
-fib.sp.col <-  c(c(colorRampPalette(RColorBrewer::brewer.pal(12,"Paired"))(10)[1],(RColorBrewer::brewer.pal(4,"Greens"))),colorRampPalette(RColorBrewer::brewer.pal(12,"Paired"))(10)[c(2,4:10)])
+#Rename the spatial neighborhood and Define the color for the plot
+spatial.neighbor.Dermal$scHolography.obj$scHolography.sc$spatial.neighborhood[which(spatial.neighbor.Dermal$scHolography.obj$scHolography.sc$spatial.neighborhood%in%c(as.character(1:4)))] <- paste0("Dermal_",spatial.neighbor.Dermal$scHolography.obj$scHolography.sc$spatial.neighborhood[which(spatial.neighbor.Dermal$scHolography.obj$scHolography.sc$spatial.neighborhood%in%c(as.character(1:4)))])
+fib.sp.col <-  c(c(colorRampPalette(brewer.pal(12,"Paired"))(10)[1],(brewer.pal(4,"Greens"))),colorRampPalette(brewer.pal(12,"Paired"))(10)[c(2,4:10)])
 
 #Plot the spatial neighborhood
 scHolography::scHolographyPlot(spatial.neighbor.Dermal$scHolography.obj,color.by = "spatial.neighborhood",color = fib.sp.col)%>% plotly::layout(scene = scene)
@@ -226,21 +229,12 @@ We can  visualize the expression of the top 10 differentially expressed genes fo
 spatial.neighbor.Dermal$neighbor.marker %>%
   group_by(cluster) %>%
   top_n(n = 10, wt = avg_log2FC) -> top10
-Seurat::DoHeatmap(spatial.neighbor.Dermal$bulk.count.obj,assay = "SCT", features = top10$gene,group.colors = brewer.pal(4,"Greens")) + NoLegend()+viridis::scale_fill_viridis()+theme(axis.text = element_text(size = 16,face = "bold"))
+Seurat::DoHeatmap(spatial.neighbor.Dermal$bulk.count.obj,assay = "SCT", features = top10$gene,group.colors = brewer.pal(4,"Greens")) + NoLegend()+scale_fill_viridis()+theme(axis.text = element_text(size = 16,face = "bold"))
 ```
 ![](img/Fib.spatial.neighbor.heatmap.png)
 
 
-## 4. Expression Spatial Dynamics
-
-The `spatialDynamicsFeaturePlot` enables the investigation of the association between spatial distribution and gene expression pattern by plotting genes with trends with respect to the SMN distance of cells to a reference group. 
-
-```r
-spatialDynamicsFeaturePlot(spatial.neighbor.Dermal$scHolography.obj,query.cluster=paste0("Dermal_",1:4),ref.cluster = c("Dermal_4"),annotationToUse = "spatial.neighborhood",geneOI = c("APCDD1","TWIST2","WNT5A","POSTN","SFRP2","GREM1","ADH1B","IGF1","ABCA8","CXCL12","MFAP5","RGS5","NOTCH3","ACTA2","MYH11"),assayToUse = "SCT",self.color = c((colorRampPalette(brewer.pal(12,"Paired"))(10)[1]),(brewer.pal(4,"Greens")),(colorRampPalette(brewer.pal(12,"Paired"))(10)[3:10])))
-```
-![](img/Fib.spatial.neighbor.1-4.dyn.heat.png)
-
-## 5. Session Information
+## 4. Session Information
 
 ```r
 sessionInfo()

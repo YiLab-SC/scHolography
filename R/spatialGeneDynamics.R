@@ -582,25 +582,26 @@ expressionByDistPlot <- function(scHolography.obj, query.cluster, ref.cluster, g
 #' @param  n.neighbor Number of nearest cells to use to define distance. Default is 30
 #' @param  heatmap.pal Color palette to use for heatmap feature coloring. Default is viridis. Other options are "rdbu", "magma", and "rdbu_1"
 #' @param  self.color A vector of user-defined color for each group
-spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.cluster, geneOI = NULL,
-          annotationToUse = "orig.cluster", assayToUse = "RNA", heatmapGp = NULL,
-          pal = "Paired", multi.pal = "RdYlBu", n.neighbor = 30, heatmap.pal = "viridis",self.color=NULL) {
+spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.cluster, geneOI = NULL, 
+                                      annotationToUse = "orig.cluster", assayToUse = "RNA", heatmapGp = NULL, 
+                                      pal = "Paired", multi.pal = "RdYlBu", n.neighbor = 30, heatmap.pal = "viridis", 
+                                      self.color = NULL) 
+{
   scHolography.sc <- scHolography.obj$scHolography.sc
-  scHolography.sc[[annotationToUse]][[1]] <- unlist(lapply(as.character(scHolography.sc[[annotationToUse]][[1]]),
+  scHolography.sc[[annotationToUse]][[1]] <- unlist(lapply(as.character(scHolography.sc[[annotationToUse]][[1]]), 
                                                            function(x) paste0(strsplit(x, split = " ")[[1]], collapse = "_")))
-  scHolography.sc[[annotationToUse]][[1]] <- unlist(lapply(as.character(scHolography.sc[[annotationToUse]][[1]]),
+  scHolography.sc[[annotationToUse]][[1]] <- unlist(lapply(as.character(scHolography.sc[[annotationToUse]][[1]]), 
                                                            function(x) paste0(strsplit(x, split = "/")[[1]], collapse = "_")))
-  scHolography.sc[[annotationToUse]][[1]] <- factor(scHolography.sc[[annotationToUse]][[1]],
-                                                    levels = stringr::str_sort(unique(scHolography.sc[[annotationToUse]][[1]]),
+  scHolography.sc[[annotationToUse]][[1]] <- factor(scHolography.sc[[annotationToUse]][[1]], 
+                                                    levels = stringr::str_sort(unique(scHolography.sc[[annotationToUse]][[1]]), 
                                                                                numeric = T))
-
-  query.cluster <- unlist(lapply(as.character(query.cluster),
+  query.cluster <- unlist(lapply(as.character(query.cluster), 
                                  function(x) paste0(strsplit(x, split = " ")[[1]], collapse = "_")))
-  query.cluster <- unlist(lapply(as.character(query.cluster),
+  query.cluster <- unlist(lapply(as.character(query.cluster), 
                                  function(x) paste0(strsplit(x, split = "/")[[1]], collapse = "_")))
-  ref.cluster <- unlist(lapply(as.character(ref.cluster), function(x) paste0(strsplit(x,
+  ref.cluster <- unlist(lapply(as.character(ref.cluster), function(x) paste0(strsplit(x, 
                                                                                       split = " ")[[1]], collapse = "_")))
-  ref.cluster <- unlist(lapply(as.character(ref.cluster), function(x) paste0(strsplit(x,
+  ref.cluster <- unlist(lapply(as.character(ref.cluster), function(x) paste0(strsplit(x, 
                                                                                       split = "/")[[1]], collapse = "_")))
   if (heatmap.pal == "rdbu") {
     heat.col <- rev(RColorBrewer::brewer.pal(n = 25, name = "RdBu"))
@@ -614,87 +615,87 @@ spatialDynamicsFeaturePlot<-function (scHolography.obj, query.cluster, ref.clust
   else {
     heat.col <- viridis::viridis(25)
   }
-  if (sum(is.na(as.numeric(as.character(levels(scHolography.sc[[annotationToUse]][[1]]))))) ==
+  if (sum(is.na(as.numeric(as.character(levels(scHolography.sc[[annotationToUse]][[1]]))))) == 
       0) {
-    scHolography.sc[[annotationToUse]][[1]] <- factor(paste("c",
-                                                            scHolography.sc[[annotationToUse]][[1]], sep = ""),
-                                                      levels = paste("c", levels(scHolography.sc[[annotationToUse]][[1]]),
+    scHolography.sc[[annotationToUse]][[1]] <- factor(paste("c", 
+                                                            scHolography.sc[[annotationToUse]][[1]], sep = ""), 
+                                                      levels = paste("c", levels(scHolography.sc[[annotationToUse]][[1]]), 
                                                                      sep = ""))
     query.cluster <- paste("c", query.cluster, sep = "")
     ref.cluster <- paste("c", ref.cluster, sep = "")
   }
-  query.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]] %in%
+  query.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]] %in% 
                                query.cluster)
-  ref.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]] %in%
+  ref.cluster.ind <- which(scHolography.sc[[annotationToUse]][[1]] %in% 
                              ref.cluster)
-  graph <- igraph::graph_from_adjacency_matrix(scHolography.obj$adj.mtx,
+  graph <- igraph::graph_from_adjacency_matrix(scHolography.obj$adj.mtx, 
                                                mode = "undirected")
   dist <- igraph::distances(graph, mode = "out")
   clus.dist <- dist[query.cluster.ind, ref.cluster.ind]
-  query.to.ref.dis <- (colMeans(apply(clus.dist, 1, sort)[1:n.neighbor,
+  query.to.ref.dis <- (colMeans(apply(clus.dist, 1, sort)[1:n.neighbor, 
   ]))
   nL <- length(unique(query.to.ref.dis))
   layer.seq <- rep(NA, length(query.cluster.ind))
   for (i in 1:(nL)) {
-    l.ind <- which(query.to.ref.dis %in% (sort(unique(query.to.ref.dis))[i]) ==
+    l.ind <- which(query.to.ref.dis %in% (sort(unique(query.to.ref.dis))[i]) == 
                      T)
-    layer.seq[l.ind] <- paste(paste(query.cluster, collapse = "_"),
+    layer.seq[l.ind] <- paste(paste(query.cluster, collapse = "_"), 
                               i, sep = "_")
   }
-  query.cluster.sub <- subset(scHolography.sc, cells = c(query.cluster.ind,
+  query.cluster.sub <- subset(scHolography.sc, cells = c(query.cluster.ind, 
                                                          ref.cluster.ind))
-  query.cluster.sub$cal.dist <- (c(query.to.ref.dis, rep(NA,
+  query.cluster.sub$cal.dist <- (c(query.to.ref.dis, rep(NA, 
                                                          length(ref.cluster.ind))))
-  query.cluster.sub[[paste(paste(query.cluster, collapse = "_"),
-                           paste(ref.cluster, collapse = "_"), sep = "To")]] <- factor(c(layer.seq,
-                                                                                         as.character(scHolography.sc[[annotationToUse]][[1]][ref.cluster.ind])),
-                                                                                       levels = c(stringr::str_sort(unique(layer.seq), numeric = T),
+  query.cluster.sub[[paste(paste(query.cluster, collapse = "_"), 
+                           paste(ref.cluster, collapse = "_"), sep = "To")]] <- factor(c(layer.seq, 
+                                                                                         as.character(scHolography.sc[[annotationToUse]][[1]][ref.cluster.ind])), 
+                                                                                       levels = c(stringr::str_sort(unique(layer.seq), numeric = T), 
                                                                                                   ref.cluster))
   if (length(intersect(query.cluster, ref.cluster)) > 0) {
     names.ls <- colnames(query.cluster.sub)
     ind.rg <- ((length(layer.seq) + 1):ncol(query.cluster.sub))
     names.ls[ind.rg] <- paste(names.ls[ind.rg], "_ref", sep = "")
-    query.cluster.sub <- Seurat::RenameCells(query.cluster.sub,
+    query.cluster.sub <- Seurat::RenameCells(query.cluster.sub, 
                                              new.names = names.ls)
   }
-  query.cluster.sub <- Seurat::SetIdent(query.cluster.sub,
-                                        value = paste(paste(query.cluster, collapse = "_"), paste(ref.cluster,
+  query.cluster.sub <- Seurat::SetIdent(query.cluster.sub, 
+                                        value = paste(paste(query.cluster, collapse = "_"), paste(ref.cluster, 
                                                                                                   collapse = "_"), sep = "To"), sep = "To")
   if (is.null(geneOI)) {
     cat("Need the Gene of Interest list if ploting by ordered distance \n")
   }
   else {
-    obj.sub <- subset(query.cluster.sub, cells = which((query.cluster.sub@active.ident %in%
+    obj.sub <- subset(query.cluster.sub, cells = which((query.cluster.sub@active.ident %in% 
                                                           ref.cluster) == F))
     if (assayToUse == "RNA") {
       Seurat::DefaultAssay(obj.sub) <- "RNA"
       obj.sub <- Seurat::NormalizeData(obj.sub)
       obj.sub <- Seurat::ScaleData(obj.sub)
-      obj.sub <- Seurat::FindVariableFeatures(obj.sub,
+      obj.sub <- Seurat::FindVariableFeatures(obj.sub, 
                                               nfeatures = 5000)
     }
-    p1 <- DoMultiBarHeatmap(obj.sub, features = geneOI, assay = assayToUse,
-                            draw.lines = F, size = 3, disPlot = T, additional.group.by = annotationToUse,
-                            label = F, palette = c(pal, multi.pal),self.color = self.color) + Seurat::NoLegend() +
-      ggplot2::scale_fill_gradientn(colors = heat.col) +
+    p1 <- DoMultiBarHeatmap(obj.sub, features = geneOI, assay = assayToUse, 
+                            draw.lines = F, size = 3, disPlot = T, additional.group.by = annotationToUse, 
+                            label = F, palette = c(pal, multi.pal), self.color = self.color) + 
+      Seurat::NoLegend() + ggplot2::scale_fill_gradientn(colors = heat.col) + 
       ggplot2::theme(legend.title = ggplot2::element_blank())
     fea <- Seurat::VariableFeatures(obj.sub)
     obj.sub[[annotationToUse]][[1]] <- droplevels(obj.sub[[annotationToUse]][[1]])
     labal.col <- colorRampPalette(brewer.pal(12, pal))(length(levels(scHolography.sc[[annotationToUse]][[1]])))
-    if(is.null(self.color)==F){
+    if (is.null(self.color) == F) {
       labal.col <- self.color
     }
-    p <- Seurat::DoHeatmap(obj.sub, features = fea[1], label = FALSE,
-                           group.by = annotationToUse, group.colors = labal.col[unlist(lapply(levels(obj.sub[[annotationToUse]][[1]]),
+    p <- Seurat::DoHeatmap(obj.sub, features = fea[1], label = FALSE, 
+                           group.by = annotationToUse, group.colors = labal.col[unlist(lapply(levels(obj.sub[[annotationToUse]][[1]]), 
                                                                                               function(x) {
-                                                                                                which(levels(scHolography.sc[[annotationToUse]][[1]]) %in%
+                                                                                                which(levels(scHolography.sc[[annotationToUse]][[1]]) %in% 
                                                                                                         x)
-                                                                                              }))]) + ggplot2::scale_fill_gradientn(colors = colorRampPalette(brewer.pal(12,
-                                                                                                                                                                         multi.pal))(100), name = "Distance", labels = c("Proximal",
+                                                                                              }))]) + ggplot2::scale_fill_gradientn(colors = colorRampPalette(brewer.pal(12, 
+                                                                                                                                                                         multi.pal))(100), name = "Distance", labels = c("Proximal", 
                                                                                                                                                                                                                          "Distal"), n.breaks = 2)
     grid::grid.newpage()
     legend <- cowplot::get_legend(p)
-    (cowplot::plot_grid(p1, NULL, legend, rel_widths = c(1,
+    (cowplot::plot_grid(p1, NULL, legend, rel_widths = c(1, 
                                                          -0.1, 1), align = "hv", nrow = 1))
   }
 }
