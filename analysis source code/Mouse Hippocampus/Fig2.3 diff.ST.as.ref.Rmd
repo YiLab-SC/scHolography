@@ -75,7 +75,6 @@ dev.off()
 ```
 
 ```{r}
-
 neighbor.eval2 <- function(dist.mat,max.neighbor,n.by,start){
   bench <-real
   expr <- vizgen.hippo@assays$Vizgen@counts
@@ -85,14 +84,16 @@ neighbor.eval2 <- function(dist.mat,max.neighbor,n.by,start){
   
   neighbor.comp.corr.mtx <- c()
   for (i in seq(start+1,(max.neighbor+1),by=n.by)) {
+    
     nn.real.ls <- lapply(colnames(dist.mat), function(x) {
       ind <- which(bench[x,colnames(dist.mat)]<=sort(bench[x,colnames(dist.mat)])[i])
-      rowSums(expr[,colnames(dist.mat[,ind])])
+      #show(expr[,colnames(dist.mat[,ind])])
+      rowSums(as.matrix(expr[,colnames(dist.mat[,ind])]))
     })
     
     nn.ls <- lapply(colnames(dist.mat), function(x) {
       ind <- which(test[x,colnames(dist.mat)]<=sort(test[x,colnames(dist.mat)])[i])
-      rowSums(expr[,colnames(dist.mat[,ind])])
+      rowSums(as.matrix(expr[,colnames(dist.mat[,ind])]))
     })
     
     neighbor.comp.corr <- unlist(lapply(1:length(nn.ls), function(x) {
@@ -102,16 +103,17 @@ neighbor.eval2 <- function(dist.mat,max.neighbor,n.by,start){
     
   }
   
-  neighbor.comp.corr.mtx <- matrix(neighbor.comp.corr.mtx,ncol = max.neighbor/n.by)
+  neighbor.comp.corr.mtx <- matrix(neighbor.comp.corr.mtx,ncol = ((max.neighbor-start)/n.by)+1)
   (neighbor.comp.corr.mtx)
 }
 
 
 
-a.3 <- neighbor.eval2(visium,15,3,3)
-b.3 <- neighbor.eval2(slide.seq,15,3,3)
-c.3 <- neighbor.eval2(xenium,15,3,3)
-d.3 <- neighbor.eval2(merfish,15,3,3)
+
+a.3 <- neighbor.eval2(visium,14,3,2)
+b.3 <- neighbor.eval2(slide.seq,14,3,2)
+c.3 <- neighbor.eval2(xenium,14,3,2)
+d.3 <- neighbor.eval2(merfish,14,3,2)
 
 
 ```
@@ -126,12 +128,16 @@ df <- data.frame(mean=cor.mean, method=factor(method,levels = rev(c("Visium","Sl
 library(viridis)
 
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/hippo.benchmark.cosine.reference.heat.tiff", units="in", width=10, height=6, res=600)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//hippo.benchmark.cosine.reference.heat.tiff", units="in", width=10, height=6, res=600)
 ggplot(df, aes(num.neighbor, method, fill= mean)) + 
   geom_tile() +
   scale_fill_viridis(discrete=FALSE)+theme_classic()+theme(axis.text = element_text(size = 15,face = "bold"),axis.text.x = element_text(angle = 45,hjust=1),axis.title=element_text(size = 18,face = "bold"),legend.title =element_text(size = 13,face = "bold"),legend.text =element_text(size = 12,face = "bold"))+xlab("Size of Neighborhood")+ylab("Reference Tech")+ labs(fill="Mean of Cosine Similarity")+geom_text(aes(label = round(mean, 3)),size=6)
 dev.off()
 ```
+
+
+
+
 
 
 
@@ -197,28 +203,23 @@ eval.plot <-function(scHolography.obj){
   
   ggplot(scholo.dat, aes(x=celltype, y=dist/mean(scholo.dat[which(scholo.dat$celltype=="CA3 Principal cells"),"dist"]), fill=celltype)) +
     geom_boxplot()+theme_classic()+scale_fill_manual(values = c("#d11141","#ffc425","#00aebd"))+ 
-  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))+NoLegend()+
+  geom_signif(comparisons = my_comparisons,test.args = list(alternative="greater",size=5),map_signif_level = TRUE)+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))+NoLegend()+
   scale_x_discrete(labels=c("CA1","CA2","CA3"))}
-
-
 ```
 
 ```{r}
 eval.plot(visium.obj.2)
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//CAs.Dist.slide.seq.tiff", units="in", width=4.5, height=6, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/CAs.Dist.slide.seq.tiff", units="in", width=4.5, height=6, res=300)
 eval.plot(slide.seq.obj.2)
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//CAs.Dist.xenium.tiff", units="in", width=4.5, height=6, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/CAs.Dist.xenium.tiff", units="in", width=4.5, height=6, res=300)
 eval.plot(xenium.obj.2)
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//CAs.Dist.merfish.tiff", units="in", width=4.5, height=6, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/CAs.Dist.merfish.tiff", units="in", width=4.5, height=6, res=300)
 eval.plot(merfish.obj.2)
 dev.off()
 
 ```
-
-
-
