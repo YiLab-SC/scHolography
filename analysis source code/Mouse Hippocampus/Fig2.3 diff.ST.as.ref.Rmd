@@ -203,22 +203,22 @@ eval.plot <-function(scHolography.obj){
   
   ggplot(scholo.dat, aes(x=celltype, y=dist/mean(scholo.dat[which(scholo.dat$celltype=="CA3 Principal cells"),"dist"]), fill=celltype)) +
     geom_boxplot()+theme_classic()+scale_fill_manual(values = c("#d11141","#ffc425","#00aebd"))+ 
-  geom_signif(comparisons = my_comparisons,test.args = list(alternative="greater",size=5),map_signif_level = TRUE)+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))+NoLegend()+
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))+NoLegend()+
   scale_x_discrete(labels=c("CA1","CA2","CA3"))}
 ```
 
 ```{r}
 eval.plot(visium.obj.2)
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/CAs.Dist.slide.seq.tiff", units="in", width=4.5, height=6, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/CAs.Dist.slide.seq.tiff", units="in", width=4.5, height=6, res=300)
 eval.plot(slide.seq.obj.2)
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/CAs.Dist.xenium.tiff", units="in", width=4.5, height=6, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/CAs.Dist.xenium.tiff", units="in", width=4.5, height=6, res=300)
 eval.plot(xenium.obj.2)
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Mouse Hippocampus/CAs.Dist.merfish.tiff", units="in", width=4.5, height=6, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/CAs.Dist.merfish.tiff", units="in", width=4.5, height=6, res=300)
 eval.plot(merfish.obj.2)
 dev.off()
 
