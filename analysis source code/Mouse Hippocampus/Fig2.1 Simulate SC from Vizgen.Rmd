@@ -321,10 +321,11 @@ dev.off()
 
 
 ```{r}
-
+expr <- low.res.sp2@assays$Vizgen@counts
+colnames(expr) <- unlist(lapply(colnames(expr),function(x) unlist(strsplit(x,split = "X"))[2]))
 neighbor.eval2 <- function(dist.mat,max.neighbor,n.by,start){
   bench <-real
-  expr <- low.res.sp2@assays$Vizgen@counts
+  
   test <- dist.mat
   diag(bench)<-10^15
   diag(test)<-10^15
@@ -334,7 +335,6 @@ neighbor.eval2 <- function(dist.mat,max.neighbor,n.by,start){
     
     nn.real.ls <- lapply(colnames(dist.mat), function(x) {
       ind <- which(bench[x,colnames(dist.mat)]<=sort(bench[x,colnames(dist.mat)])[i])
-      #show(expr[,colnames(dist.mat[,ind])])
       rowSums(as.matrix(expr[,colnames(dist.mat[,ind])]))
     })
     
@@ -356,12 +356,11 @@ neighbor.eval2 <- function(dist.mat,max.neighbor,n.by,start){
 
 
 
-a.3 <- neighbor.eval2(scHolo,50,1,1)
-b.3 <- neighbor.eval2(celltrek,50,1,1)
-c.3 <- neighbor.eval2(cyto,50,1,1)
-d.3 <- neighbor.eval2(seurat,50,1,1)
-e.3 <- neighbor.eval2(tangram,50,1,1)
-
+a.3 <- neighbor.eval2(scHolo,16,1,1)
+b.3 <- neighbor.eval2(celltrek,16,1,1)
+c.3 <- neighbor.eval2(cyto,16,1,1)
+d.3 <- neighbor.eval2(seurat,16,1,1)
+e.3 <- neighbor.eval2(tangram,16,1,1)
 ```
 
 ```{r}
