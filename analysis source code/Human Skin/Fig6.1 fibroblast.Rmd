@@ -114,9 +114,9 @@ dev.off()
 library(ggpubr)
 my_comparisons <- list( c("Dermal_1", "Dermal_2"), c("Dermal_2", "Dermal_3"), c("Dermal_3", "Dermal_4") )
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//clusterDist.Fib1.2.3.4.to.4_rev.tiff", units="in", width=5, height=5, res=600)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//clusterDist.Fib1.2.3.4.to.4_rev.tiff", units="in", width=5, height=5, res=600)
 scHolography::clusterDistanceBoxplot(spatial.neighbor.Dermal$scHolography.obj,annotationToUse = "spatial.neighborhood",query.cluster.list = (paste0("Dermal_",c(1:4))),reference.cluster = c("Dermal_4"))+ggplot2::scale_fill_manual(values = (brewer.pal(4,"Greens"))[1:4])+ 
-  stat_compare_means(comparisons = my_comparisons,size = 5)+NoLegend()+theme(axis.text = element_text(size = 16,face = "bold"),axis.title.x = element_blank(),axis.title.y = element_text(size = 20,face = "bold") ,axis.text.x = element_text(angle = 45,hjust=1))+ylab("SMN Distance")
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+NoLegend()+theme(axis.text = element_text(size = 16,face = "bold"),axis.title.x = element_blank(),axis.title.y = element_text(size = 20,face = "bold") ,axis.text.x = element_text(angle = 45,hjust=1))+ylab("SMN Distance")
 dev.off()
 
 
