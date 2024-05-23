@@ -45,18 +45,18 @@ type <- scHolography.obj.sub$scHolography.sc$suprabasal.sub[colnames(scHolograph
 
 sup.epi.neighb <- data.frame(n.basal=n.basal, n.suprabasal=n.suprabasal, type=type)
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//sup.num.basal.vs.sup.neighbor.tiff", units="in", width=5, height=5, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//sup.num.basal.vs.sup.neighbor.tiff", units="in", width=5, height=5, res=300)
 ggplot(data = sup.epi.neighb, aes(x = n.suprabasal, y = n.basal)) +
   geom_jitter(aes(color=type)) +
-  stat_cor(label.y = 30) +theme_classic()+scale_color_manual(values = my.col[2:3])+ 
+  stat_cor(label.y = 30, size = 6) +theme_classic()+scale_color_manual(values = my.col[2:3])+ 
   geom_smooth(method = "lm", 
-              formula = y ~ x) +NoLegend()+xlab("# of Suprabasal Neighbors")+ylab("# of Basal Neighbors")+theme(axis.text = element_text(size = 12,face = "bold"),axis.text.x = element_text(angle = 45,hjust=1),axis.title=element_text(size = 15,face = "bold"))
+              formula = y ~ x) +NoLegend()+xlab("# of Suprabasal Neighbors")+ylab("# of Basal Neighbors")+theme(axis.text = element_text(size = 15,face = "bold"),axis.text.x = element_text(angle = 45,hjust=1),axis.title=element_text(size = 15,face = "bold"))
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//sup.num.basal.neighbor.tiff", units="in", width=3, height=5, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/sup.num.basal.neighbor.tiff", units="in", width=3, height=5, res=300)
 ggplot(data = sup.epi.neighb, aes(x=type, y = n.basal)) +
   geom_boxplot(aes(color=type),lwd=1) +theme_classic()+
-  geom_jitter(aes(color=type),width = 0.3,size=0.3,alpha = 0.4 )+scale_color_manual(values = my.col[2:3])+xlab("")+ylab("# of Basal Neighbors")+NoLegend()+theme(axis.text = element_text(size = 12,face = "bold"),axis.text.x = element_text(angle = 45,hjust=1),axis.title=element_text(size = 15,face = "bold"))
+  geom_jitter(aes(color=type),width = 0.3,size=0.3,alpha = 0.4 )+scale_color_manual(values = my.col[2:3])+xlab("")+ylab("# of Basal Neighbors")+NoLegend()+theme(axis.text = element_text(size = 12,face = "bold"),axis.text.x = element_text(angle = 45,hjust=1,color = "black"),axis.title=element_text(size = 15,face = "bold"))
 dev.off()
 ```
 
@@ -67,7 +67,7 @@ my_comparisons <- list(  c("Basal", "Transition_KC"), c("Transition_KC", "Differ
 
 #tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//clusterDist.Basal.tiff", units="in", width=5, height=5, res=300)
 scHolography::clusterDistanceBoxplot(scHolography.obj.sub,annotationToUse = "suprabasal.sub",query.cluster.list = c("Basal", "Transition_KC","Differentiated_KC"),reference.cluster = c("Basal"))+ggplot2::scale_fill_manual(values =my.col)+ 
-  stat_compare_means(comparisons = my_comparisons,size = 5,method.args = list(alternative="less"))+NoLegend()+theme(axis.text = element_text(size = 16,face = "bold"),axis.title.x = element_blank(),axis.title.y = element_text(size = 20,face = "bold") ,axis.text.x = element_text(angle = 45,hjust=1))
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+NoLegend()+theme(axis.text = element_text(size = 16,face = "bold"),axis.title.x = element_blank(),axis.title.y = element_text(size = 20,face = "bold") ,axis.text.x = element_text(angle = 45,hjust=1))
 #dev.off()
 ```
 
@@ -101,51 +101,51 @@ write.csv(top10.neg.ba,"~/OneDrive - Northwestern University/Northwestern/Yi Lab
 ```{r}
 my_comparisons <- list( c("Basal", "Transition_KC"), c("Transition_KC", "Differentiated_KC") )
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.KRT5.tiff", units="in", width=4, height=5, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Epithelial.KRT5.tiff", units="in", width=4, height=5, res=300)
 VlnPlot(scHolography.obj$scHolography.sc,c("KRT5"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
-  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 6.5,method.args = list(alternative="greater"))+ylim(c(0,7))+NoLegend()+theme(axis.title.x = element_blank())
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+ylim(c(0,7))+NoLegend()+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.KRT14.tiff", units="in", width=4, height=5, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Epithelial.KRT14.tiff", units="in", width=4, height=5, res=300)
 VlnPlot(scHolography.obj$scHolography.sc,c("KRT14"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
-  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 6.5,method.args = list(alternative="greater"))+ylim(c(0,7))+NoLegend()+theme(axis.title.x = element_blank())
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+ylim(c(0,7))+NoLegend()+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.COL17A1.tiff", units="in", width=4, height=5, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Epithelial.COL17A1.tiff", units="in", width=4, height=5, res=300)
 VlnPlot(scHolography.obj$scHolography.sc,c("COL17A1"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
-  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 4.5,method.args = list(alternative="greater"))+ylim(c(0,5))+NoLegend()+theme(axis.title.x = element_blank())
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+ylim(c(0,5))+NoLegend()+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.ITGA2.tiff", units="in", width=4, height=5, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Epithelial.ITGA2.tiff", units="in", width=4, height=5, res=300)
 VlnPlot(scHolography.obj$scHolography.sc,c("ITGA2"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
-  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 2.75,method.args = list(alternative="greater"))+ylim(c(0,3.25))+NoLegend()+theme(axis.title.x = element_blank())
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+ylim(c(0,3.25))+NoLegend()+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.ITGB1.tiff", units="in", width=4, height=5, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Epithelial.ITGB1.tiff", units="in", width=4, height=5, res=300)
 VlnPlot(scHolography.obj$scHolography.sc,c("ITGB1"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
-  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 2.75,method.args = list(alternative="greater"))+ylim(c(0,3.25))+NoLegend()+theme(axis.title.x = element_blank())
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+ylim(c(0,3.25))+NoLegend()+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.LAMB3.tiff", units="in", width=4, height=5, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Epithelial.LAMB3.tiff", units="in", width=4, height=5, res=300)
 VlnPlot(scHolography.obj$scHolography.sc,c("LAMB3"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
-  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 3.5,method.args = list(alternative="greater"))+ylim(c(0,3.75))+NoLegend()+theme(axis.title.x = element_blank())
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+ylim(c(0,3.75))+NoLegend()+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))
 dev.off()
 
 
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.KRT1.tiff", units="in", width=4, height=5, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Epithelial.KRT1.tiff", units="in", width=4, height=5, res=300)
 VlnPlot(scHolography.obj$scHolography.sc,c("KRT1"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
-  stat_compare_means(comparisons = my_comparisons,size = 4,label.y = 6.5,method.args = list(alternative="less"))+ylim(c(0,7))+NoLegend()+theme(axis.title.x = element_blank())
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+ylim(c(0,7))+NoLegend()+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.KRT10.tiff", units="in", width=4, height=5, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Epithelial.KRT10.tiff", units="in", width=4, height=5, res=300)
 VlnPlot(scHolography.obj$scHolography.sc,c("KRT10"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
-  stat_compare_means(comparisons = my_comparisons,size = 4,label.y = 6.5,method.args = list(alternative="less"))+ylim(c(0,7))+NoLegend()+theme(axis.title.x = element_blank())
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+ylim(c(0,7))+NoLegend()+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//Epithelial.KRTDAP.tiff", units="in", width=4, height=5, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft/Epithelial.KRTDAP.tiff", units="in", width=4, height=5, res=300)
 VlnPlot(scHolography.obj$scHolography.sc,c("KRTDAP"),idents = c("Transition_KC","Differentiated_KC","Basal"),assay = "SCT", cols = my.col)+ 
-  stat_compare_means(comparisons = my_comparisons,size = 5,label.y = 6.5,method.args = list(alternative="less"))+ylim(c(0,7))+NoLegend()+theme(axis.title.x = element_blank())
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+ylim(c(0,7))+NoLegend()+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold"))
 dev.off()
 
 ```

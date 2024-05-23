@@ -128,9 +128,9 @@ fig.L4
 ```{r}
 library(ggpubr)
 my_comparisons <- list( c("Suprabasal", "Basal"), c("Basal", "Dermal"), c("Dermal", "Smooth Muscle") )
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human Skin//clusterDist.celltype.comp.tiff", units="in", width=7, height=5, res=300)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//clusterDist.celltype.comp.tiff", units="in", width=5, height=5, res=300)
 scHolography::clusterDistanceBoxplot(scHolography.obj,annotationToUse = "celltype",reference.cluster = "Smooth Muscle",query.cluster.list = c("Suprabasal","Basal","Dermal","Smooth Muscle"))+ 
-  stat_compare_means(comparisons = my_comparisons)
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+NoLegend()+ theme(axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text = element_text(size = 15,face = "bold",color = "black"))
 dev.off()
 ```
 ```{r}
