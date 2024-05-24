@@ -96,14 +96,14 @@ my_comparisons <- list( c("TSK", "Tumor_KC_Cyc"), c("Tumor_KC_Cyc", "Tumor_KC_Ba
 #SCC.obj$scHolography.sc$tumor.k.n.normal <- SCC.obj$scHolography.sc$level2_celltype
 #SCC.obj$scHolography.sc$tumor.k.n.normal[which(SCC.obj$scHolography.sc$Disease%in%"Normal")]
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC//tumor.kc.to.tcell.dist.tiff", units="in", width=5, height=5, res=600)
-clusterDistanceBoxplot(SCC.obj,annotationToUse = "my.level",query.cluster.list = c("TSK","Tumor_KC_Cyc","Tumor_KC_Basal","Tumor_KC_Diff"),reference.cluster = c("Tcell"))+ 
-  stat_compare_means(comparisons = my_comparisons,method.args = list("less"))+scale_fill_manual(values = my.col[c(11,13,12,14)])+ theme(axis.text.x = element_text(angle = 45, hjust=1))+theme(axis.title.x = element_blank(),axis.text = element_text(size = 15,face = "bold"),axis.title = element_text(size = 15,face = "bold"))+NoLegend()
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//tumor.kc.to.tcell.dist.tiff", units="in", width=5, height=5, res=600)
+clusterDistanceBoxplot(SCC.obj,annotationToUse = "my.level",query.cluster.list = c("TSK","Tumor_KC_Cyc","Tumor_KC_Basal","Tumor_KC_Diff"),reference.cluster = c("Tcell"))+
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+scale_fill_manual(values = my.col[c(11,13,12,14)])+ theme(axis.text.x = element_text(angle = 45, hjust=1))+theme(axis.title.x = element_blank(),axis.text = element_text(size = 15,face = "bold",color = "black"),axis.title = element_text(size = 15,face = "bold"))+NoLegend()
 dev.off()
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC//tumor.kc.to.myeloid.dist.tiff", units="in", width=5, height=5, res=600)
-clusterDistanceBoxplot(SCC.obj,annotationToUse = "my.level",query.cluster.list = c("TSK","Tumor_KC_Cyc","Tumor_KC_Basal","Tumor_KC_Diff"),reference.cluster = c("Myeloid"))+ 
-  stat_compare_means(comparisons = my_comparisons,method.args = list("less"))+scale_fill_manual(values = my.col[c(11,13,12,14)])+ theme(axis.text.x = element_text(angle = 45, hjust=1))+theme(axis.title.x = element_blank(),axis.text = element_text(size = 15,face = "bold"),axis.title = element_text(size = 15,face = "bold"))+NoLegend()
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//tumor.kc.to.myeloid.dist.tiff", units="in", width=5, height=5, res=600)
+clusterDistanceBoxplot(SCC.obj,annotationToUse = "my.level",query.cluster.list = c("TSK","Tumor_KC_Cyc","Tumor_KC_Basal","Tumor_KC_Diff"),reference.cluster = c("Myeloid"))+
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+scale_fill_manual(values = my.col[c(11,13,12,14)])+ theme(axis.text.x = element_text(angle = 45, hjust=1))+theme(axis.title.x = element_blank(),axis.text = element_text(size = 15,face = "bold",color = "black"),axis.title = element_text(size = 15,face = "bold"))+NoLegend()
 dev.off()
 ```
 
@@ -145,9 +145,9 @@ scc.sp.neighbor.tumor_new$query.only.obj$scHolography.sc <- SetIdent(scc.sp.neig
 tumor.kc.comp <- scc.sp.neighbor.tumor_new$query.only.obj$scHolography.sc@meta.data[,c("spatial.neighborhood","level2_celltype")]
 tumor.kc.comp$level2_celltype <- factor(tumor.kc.comp$level2_celltype,levels = c("TSK","Tumor_KC_Cyc","Tumor_KC_Basal","Tumor_KC_Diff" ))
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/TumorKC.OG.cluster.composition.tiff", units="in", width=5, height=5, res=600)
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//TumorKC.OG.cluster.composition.tiff", units="in", width=5, height=5, res=600)
 ggplot(tumor.kc.comp, aes(fill=spatial.neighborhood, x=level2_celltype)) + 
-  geom_bar(position="fill")+scale_fill_manual(values = brewer.pal(3,"RdPu"))+theme_classic()+ NoLegend()+theme(axis.text = element_text(size = 16,face = "bold"),axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text.x = element_text(angle = 45, hjust=1))
+  geom_bar(position="fill")+scale_fill_manual(values = brewer.pal(3,"RdPu"))+theme_classic()+ NoLegend()+theme(axis.text = element_text(size = 16,face = "bold",color = "black"),axis.title.x = element_blank(),axis.title.y = element_blank(),axis.text.x = element_text(angle = 45, hjust=1))
 dev.off()
 ```
 
@@ -162,15 +162,15 @@ plotly::orca(fig.sp.neighb, "fig.sp.neighb.tumor.kc.svg")
 library(RColorBrewer)
 my_comparisons <- list( c("1", "2"), c("2", "3") )
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/TumorKC.sp.neighb.dist.to.tcell.tiff", units="in", width=3, height=5, res=600)
-clusterDistanceBoxplot(scc.sp.neighbor.tumor_new$scHolography.obj,annotationToUse = "spatial.neighborhood",query.cluster.list = as.character(c(1:3)),reference.cluster = "Tcell")+scale_fill_manual(values = (brewer.pal(3,"RdPu")))+ 
-  stat_compare_means(comparisons = my_comparisons,method.args = list("greater"),size = 5)+theme(axis.text.x = element_text(angle = 45, hjust=1))+theme(axis.title.x = element_blank(),axis.text = element_text(size = 15,face = "bold"),axis.title = element_text(size = 15,face = "bold"))+NoLegend()+ scale_x_discrete(labels=c('Tumor_KC1', 'Tumor_KC2', 'Tumor_KC3'))
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//TumorKC.sp.neighb.dist.to.tcell.tiff", units="in", width=4, height=5, res=300)
+clusterDistanceBoxplot(scc.sp.neighbor.tumor_new$scHolography.obj,annotationToUse = "spatial.neighborhood",query.cluster.list = as.character(c(1:3)),reference.cluster = "Tcell")+scale_fill_manual(values = (brewer.pal(3,"RdPu")))+
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+theme(axis.text.x = element_text(angle = 45, hjust=1))+theme(axis.title.x = element_blank(),axis.text = element_text(size = 15,face = "bold",color = "black"),axis.title = element_text(size = 15,face = "bold"))+NoLegend()+ scale_x_discrete(labels=c('Tumor_KC1', 'Tumor_KC2', 'Tumor_KC3'))
 dev.off()
 
 
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/TumorKC.sp.neighb.dist.to.myeloid.tiff", units="in", width=3, height=5, res=600)
-clusterDistanceBoxplot(scc.sp.neighbor.tumor_new$scHolography.obj,annotationToUse = "spatial.neighborhood",query.cluster.list = as.character(c(1:3)),reference.cluster = "Myeloid")+scale_fill_manual(values = (brewer.pal(3,"RdPu")))+ 
-  stat_compare_means(comparisons = my_comparisons,method.args = list("greater"),size = 5)+theme(axis.text.x = element_text(angle = 45, hjust=1))+theme(axis.title.x = element_blank(),axis.text = element_text(size = 15,face = "bold"),axis.title = element_text(size = 15,face = "bold"))+NoLegend()+ scale_x_discrete(labels=c('Tumor_KC1', 'Tumor_KC2', 'Tumor_KC3'))
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//TumorKC.sp.neighb.dist.to.myeloid.tiff", units="in", width=4, height=5, res=300)
+clusterDistanceBoxplot(scc.sp.neighbor.tumor_new$scHolography.obj,annotationToUse = "spatial.neighborhood",query.cluster.list = as.character(c(1:3)),reference.cluster = "Myeloid")+scale_fill_manual(values = (brewer.pal(3,"RdPu")))+
+  geom_signif(comparisons = my_comparisons,test.args = list(size=5),map_signif_level = TRUE)+theme(axis.text.x = element_text(angle = 45, hjust=1))+theme(axis.title.x = element_blank(),axis.text = element_text(size = 15,face = "bold",color = "black"),axis.title = element_text(size = 15,face = "bold"))+NoLegend()+ scale_x_discrete(labels=c('Tumor_KC1', 'Tumor_KC2', 'Tumor_KC3'))
 dev.off()
 ```
 ```{r}
@@ -295,13 +295,13 @@ for (i in c("ASDC","CD1C","CLEC9A","LC","Mac","MDSC","PDC")) {
 
 
 ```{r}
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/Myeloid.dist.to.tumor.kc.tiff", units="in", width=6, height=6, res=600)
-clusterDistanceBoxplot(SCC.obj,annotationToUse = "level2_celltype",query.cluster.list =c("PDC","CLEC9A","ASDC","CD1C","LC","Mac","MDSC"),reference.cluster = c("TSK","Tumor_KC_Basal","Tumor_KC_Cyc","Tumor_KC_Diff") )+scale_fill_manual(values = Mac.color[c(7,3,1,2,4,5,6)])+ylab("SMN Distance to Tumor Keratinocyte")+theme(axis.text = element_text(size = 14,face = "bold"),axis.text.x = element_text(angle = 45,hjust=1),axis.title=element_text(size = 15,face = "bold"))+NoLegend()+xlab("")
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//Myeloid.dist.to.tumor.kc.tiff", units="in", width=6, height=6, res=600)
+clusterDistanceBoxplot(SCC.obj,annotationToUse = "level2_celltype",query.cluster.list =c("PDC","CLEC9A","ASDC","CD1C","LC","Mac","MDSC"),reference.cluster = c("TSK","Tumor_KC_Basal","Tumor_KC_Cyc","Tumor_KC_Diff") )+scale_fill_manual(values = Mac.color[c(7,3,1,2,4,5,6)])+ylab("SMN Distance to Tumor Keratinocyte")+theme(axis.text = element_text(size = 14,face = "bold",color = "black"),axis.text.x = element_text(angle = 45,hjust=1),axis.title=element_text(size = 15,face = "bold"))+NoLegend()+xlab("")
 dev.off()
 ```
 ```{r}
-tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_2ndDraft/Human SCC/Myeloid.dist.to.tcell.tiff", units="in", width=6, height=6, res=600)
-clusterDistanceBoxplot(scc.sp.neighbor.mac_new$scHolography.obj,annotationToUse = "level2_celltype",query.cluster.list =c("PDC","ASDC","CLEC9A","CD1C","Mac","MDSC","LC"),reference.cluster = "Tcell" )+scale_fill_manual(values = Mac.color[c(7,1,3,2,5,6,4)])+ylab("SMN Distance to T Cell")+theme(axis.text = element_text(size = 14,face = "bold"),axis.text.x = element_text(angle = 45,hjust=1),axis.title=element_text(size = 15,face = "bold"))+NoLegend()+xlab("")
+tiff("~/OneDrive - Northwestern University/Northwestern/Yi Lab/Manuscript/Code_3rdDraft//Myeloid.dist.to.tcell.tiff", units="in", width=6, height=6, res=600)
+clusterDistanceBoxplot(scc.sp.neighbor.mac_new$scHolography.obj,annotationToUse = "level2_celltype",query.cluster.list =c("PDC","ASDC","CLEC9A","CD1C","Mac","MDSC","LC"),reference.cluster = "Tcell" )+scale_fill_manual(values = Mac.color[c(7,1,3,2,5,6,4)])+ylab("SMN Distance to T Cell")+theme(axis.text = element_text(size = 14,face = "bold",color = "black"),axis.text.x = element_text(angle = 45,hjust=1),axis.title=element_text(size = 15,face = "bold"))+NoLegend()+xlab("")
 dev.off()
 ```
 
